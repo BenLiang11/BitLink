@@ -42,6 +42,17 @@ include_directories(include)
 # target_link_libraries(example_server example_lib Boost::system)
 add_executable(server src/main.cc src/session.cc src/server.cc)
 
+add_library(config_parser src/config_parser.cc)
+
+
+add_executable(config_parser_main src/config_parser_main.cc)
+target_link_libraries(config_parser_main config_parser)
+
+
+add_executable(config_parser_test tests/config_parser_test.cc)
+target_link_libraries(config_parser_test config_parser gtest_main)
+
+gtest_discover_tests(config_parser_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
 
 # NOT NEEDED: Update test executable name, srcs, and deps
 # add_executable(example_lib_test tests/example_lib_test.cc)
