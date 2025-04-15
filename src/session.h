@@ -2,6 +2,7 @@
 #define SESSION_H
 
 #include <boost/asio.hpp>
+#include <string>
 
 using boost::asio::ip::tcp;
 
@@ -19,6 +20,8 @@ private:
   tcp::socket socket_;
   enum { max_length = 1024 };
   char data_[max_length];
+
+  std::string request_data;
   
 };
 

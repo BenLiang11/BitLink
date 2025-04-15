@@ -40,7 +40,7 @@ include_directories(include)
 # RESOLVED: Update executable name, srcs, and deps
 # add_executable(example_server src/example_server_main.cc)
 # target_link_libraries(example_server example_lib Boost::system)
-add_executable(server src/main.cc src/session.cc src/server.cc)
+add_executable(server src/main.cc src/session.cc src/server.cc src/config_parser.cc)
 
 add_library(config_parser src/config_parser.cc)
 
