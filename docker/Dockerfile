@@ -1,31 +1,29 @@
 ### Build/test container ###
 # Define builder stage
-FROM i-am-steve:base as builder
+FROM ubuntu:24.04 AS builder
 
-# Share work directory
+# Install required packages
+RUN apt-get update && \
+    apt-get install -y build-essential cmake libboost-all-dev
+
+# Copy project and set working directory
 COPY . /usr/src/project
-WORKDIR /usr/src/project/build
+WORKDIR /usr/src/project
 
-# Build and test
-RUN cmake ..
-RUN make
-RUN ctest --output-on_failure
+# Create build directory and run build
+RUN mkdir -p build && cd build && cmake .. && make && ctest --output-on_failure
 
 
 ### Deploy container ###
 # Define deploy stage
-FROM ubuntu:noble as deploy
+FROM ubuntu:24.04 AS deploy
 
-# TODO(!): Copy server output binary to "."
-# COPY --from=builder /usr/src/project/build/bin/example_server .
+# Copy the built binary
+COPY --from=builder /usr/src/project/build/bin/server .
 
-# TODO(!): Expose some port(s)
-# EXPOSE 80
+# Expose port
+EXPOSE 80
 
-# Use ENTRYPOINT to specify the binary name
-# TODO(!): Update with real server name
-# ENTRYPOINT ["./example_server"]
-
-# Use CMD to specify arguments to ENTRYPOINT
-# TODO(!): Update with real server args
-# CMD [""]
+# Set server run command
+ENTRYPOINT ["./server"]
+CMD ["80"]
