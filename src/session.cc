@@ -39,7 +39,7 @@ void session::handle_read(const boost::system::error_code& error,
       request_data;
 
     boost::asio::async_write(socket_,
-        boost::asio::buffer(data_, bytes_transferred),
+        boost::asio::buffer(response),
         boost::bind(&session::handle_write, this,
           boost::asio::placeholders::error));
   }
