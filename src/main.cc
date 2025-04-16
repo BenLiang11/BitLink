@@ -46,7 +46,7 @@ int main(int argc, char* argv[])
     using namespace std;
 
     //Start service on read port
-    server s(io_service, atoi(argv[1]));
+    server s(io_service, port);
 
     io_service.run();
   }
