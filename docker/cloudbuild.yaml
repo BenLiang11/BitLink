@@ -23,4 +23,19 @@ steps:
     '-t', 'gcr.io/$PROJECT_ID/i-am-steve:latest',
     '.'
   ]
-images: ['gcr.io/$PROJECT_ID/i-am-steve:base', 'gcr.io/$PROJECT_ID/i-am-steve:latest']
+
+# Coverage report
+- name: 'gcr.io/cloud-builders/docker'
+  id: coverage
+  args: [
+    'build',
+    '-f', 'docker/coverage.Dockerfile',
+    '-t', 'i-am-steve:coverage',
+    '-t', 'gcr.io/$PROJECT_ID/i-am-steve:coverage',
+    '.'
+  ]
+
+images: ['gcr.io/$PROJECT_ID/i-am-steve:base', 
+  'gcr.io/$PROJECT_ID/i-am-steve:latest',
+  'gcr.io/$PROJECT_ID/i-am-steve:coverage']
+
