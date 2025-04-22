@@ -122,9 +122,9 @@ NginxConfigParser::TokenType NginxConfigParser::ParseToken(std::istream* input,
               input->peek() == '\t' || input->peek() == ';' ||
               input->peek() == '{' || input->peek() == '}') {
                 return TOKEN_TYPE_NORMAL;
-              } else {
-                return TOKEN_TYPE_ERROR;
-              }
+          } else {
+            return TOKEN_TYPE_ERROR;
+          }
         }
         continue;
 
@@ -146,13 +146,6 @@ NginxConfigParser::TokenType NginxConfigParser::ParseToken(std::istream* input,
                 return TOKEN_TYPE_NORMAL;
           } else {
             return TOKEN_TYPE_ERROR;
-          }
-        }
-        else if (c == '\\') {
-          // Escape character
-          if (input->good()) {
-            char next = input->get();
-            *value += next;
           }
         }
         continue;

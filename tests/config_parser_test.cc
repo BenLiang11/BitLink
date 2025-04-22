@@ -1,5 +1,6 @@
 #include "gtest/gtest.h"
 #include "config_parser.h"
+#include <sstream>
 
 // Fixture
 class NginxConfigParserTestFixture : public ::testing::Test {
@@ -120,4 +121,27 @@ TEST_F(NginxConfigParserTestFixture, start_block_error_config) {
 TEST_F(NginxConfigParserTestFixture, end_block_error_config) {
   bool success = parser.Parse("end_block_error_config", &out_config);
   EXPECT_FALSE(success);
+}
+
+// Test 20
+TEST_F(NginxConfigParserTestFixture, notInlineComment) {
+  bool success = parser.Parse("not_inline_comment_config", &out_config);
+  EXPECT_TRUE(success);
+}
+
+// Test 21 no increase
+TEST_F(NginxConfigParserTestFixture, NginxConfigToString) {
+  bool success = parser.Parse("to_string_config", &out_config);
+  std::string res =  "foo bar;\nserver {\n  port 8080;\n  server_name foo.com;\n  root /home/ubuntu/sites/foo/;\n}\n";
+  std::string config_string = out_config.ToString();
+  bool isSame = config_string.compare(res)==0; //not same => not 1 => FALSE
+  EXPECT_TRUE(isSame);
+}
+//Test 22 no increase
+TEST_F(NginxConfigParserTestFixture, emptyToString) {
+  bool success = parser.Parse("empty_config", &out_config);
+  std::string res =  "bar;\nserver {\n  port 8080;\n  server_name foo.com;\n  root /home/ubuntu/sites/foo/;\n}\n";
+  std::string config_string = out_config.ToString();
+  bool isSame = config_string.compare(res)==1; //not same => not 1 => FALSE
+  EXPECT_FALSE(isSame);
 }

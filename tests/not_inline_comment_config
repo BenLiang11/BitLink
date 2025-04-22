@@ -1,0 +1,10 @@
+#should be true
+#simply check comment in new line
+#testing\nasdf\n
+server {
+  listen 8080;
+  server_name dadadada.com;
+  root /bin/bash;
+}
+#ending
+#testing\n
