@@ -1,0 +1,5 @@
+foo "haz";
+server {
+  location/ {
+    test http://localhost:8080;
+}

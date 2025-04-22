@@ -1,0 +1,7 @@
+foo "bar";
+
+server {
+  location /{
+    test http://localhost:8080;
+  }
+}

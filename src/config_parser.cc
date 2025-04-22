@@ -107,17 +107,56 @@ NginxConfigParser::TokenType NginxConfigParser::ParseToken(std::istream* input,
             continue;
         }
       case TOKEN_STATE_SINGLE_QUOTE:
+        if (c == '\\') {
+          // Escape character - append next character as-is
+          if (input->good()) {
+            char next = input->get();
+            *value += next;
+          }
+          continue;
+        }
         *value += c;
         if (c == '\'') {
-          return TOKEN_TYPE_NORMAL;
+          // acceptable characters after single quote
+          if (input->peek() == ' ' || input->peek() == '\n' || 
+              input->peek() == '\t' || input->peek() == ';' ||
+              input->peek() == '{' || input->peek() == '}') {
+                return TOKEN_TYPE_NORMAL;
+              } else {
+                return TOKEN_TYPE_ERROR;
+              }
         }
         continue;
+
       case TOKEN_STATE_DOUBLE_QUOTE:
+        if (c == '\\') {
+          // Escape character
+          if (input->good()) {
+            char next = input->get();
+            *value += next;
+          }
+          continue;
+        }
         *value += c;
         if (c == '"') {
-          return TOKEN_TYPE_NORMAL;
+          // acceptable characters after double quote
+          if (input->peek() == ' ' || input->peek() == '\n' ||
+              input->peek() == '\t' || input->peek() == ';' ||
+              input->peek() == '{' || input->peek() == '}') {
+                return TOKEN_TYPE_NORMAL;
+          } else {
+            return TOKEN_TYPE_ERROR;
+          }
+        }
+        else if (c == '\\') {
+          // Escape character
+          if (input->good()) {
+            char next = input->get();
+            *value += next;
+          }
         }
         continue;
+
       case TOKEN_STATE_TOKEN_TYPE_COMMENT:
         if (c == '\n' || c == '\r') {
           return TOKEN_TYPE_COMMENT;
@@ -212,16 +251,26 @@ bool NginxConfigParser::Parse(std::istream* config_file, NginxConfig* config) {
           new_config);
       config_stack.push(new_config);
     } else if (token_type == TOKEN_TYPE_END_BLOCK) {
-      if (last_token_type != TOKEN_TYPE_STATEMENT_END) {
+
+      if (last_token_type != TOKEN_TYPE_STATEMENT_END &&
+          last_token_type != TOKEN_TYPE_START_BLOCK &&  // {} is valid
+          last_token_type != TOKEN_TYPE_END_BLOCK) {    // }} can be valid
         // Error.
         break;
       }
       config_stack.pop();
+      // Invalid braces
+      if (config_stack.size() == 0)
+        break;
     } else if (token_type == TOKEN_TYPE_EOF) {
       if (last_token_type != TOKEN_TYPE_STATEMENT_END &&
           last_token_type != TOKEN_TYPE_END_BLOCK && 
           last_token_type != TOKEN_TYPE_START) {
         // Error.
+        break;
+      }
+      //invalid braces
+      else if (config_stack.size() > 1) {
         break;
       }
       return true;
