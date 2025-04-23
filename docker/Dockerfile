@@ -1,29 +1,32 @@
 ### Build/test container ###
-# Define builder stage
 FROM ubuntu:24.04 AS builder
 
 # Install required packages
 RUN apt-get update && \
     apt-get install -y build-essential cmake libboost-all-dev
 
-# Copy project and set working directory
-COPY . /usr/src/project
+# Set workdir and copy project
 WORKDIR /usr/src/project
+COPY . .
 
-# Create build directory and run build
-RUN mkdir -p build && cd build && cmake .. && make && ctest --output-on_failure
-
+# Build the project
+# RUN mkdir -p build && cd build && cmake .. && make && ctest --output-on_failure
+RUN mkdir -p build && cd build && cmake -DDOCKER_BUILD=1 .. && make
 
 ### Deploy container ###
-# Define deploy stage
 FROM ubuntu:24.04 AS deploy
 
-# Copy the built binary
-COPY --from=builder /usr/src/project/build/bin/server .
+# Set working directory
+WORKDIR /app
 
-# Expose port
+# Copy the built server binary
+COPY --from=builder /usr/src/project/build/bin/server ./server
+
+# Copy the config file into container
+COPY config/test.conf ./config/test.conf
+
+# Expose port 80 (just for reference, not mandatory)
 EXPOSE 80
 
-# Set server run command
-ENTRYPOINT ["./server"]
-CMD ["80"]
+# Run the server with config
+CMD ["./server", "./config/test.conf"]

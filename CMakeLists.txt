@@ -42,11 +42,30 @@ add_library(session_lib src/session.cc)
 
 # GoogleTest and test setup (excluded in Docker build)
 include(GoogleTest)
-add_subdirectory(/usr/src/googletest googletest)
-add_executable(config_parser_test tests/config_parser_test.cc)
-target_link_libraries(config_parser_test config_parser gtest_main)
-gtest_discover_tests(config_parser_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+# add_subdirectory(/usr/src/googletest googletest)
+if(NOT DOCKER_BUILD)
+  include(GoogleTest)
+  add_subdirectory(third_party/googletest)
 
+<<<<<<< PATCH SET (d73335 worked on dockerfile + test integration + vm gcloud)
+  add_executable(config_parser_test tests/config_parser_test.cc)
+  target_link_libraries(config_parser_test config_parser gtest_main)
+  gtest_discover_tests(config_parser_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+
+  include(cmake/CodeCoverageReportConfig.cmake)
+  generate_coverage_report(TARGETS server config_parser TESTS config_parser_test)
+endif()
+
+# server_test
+add_executable(server_test tests/server_test.cc)
+target_link_libraries(server_test server_lib gtest_main gmock_main)
+gtest_discover_tests(server_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+
+# session_test
+add_executable(session_test tests/session_test.cc)
+target_link_libraries(session_test session_lib gtest_main gmock_main)
+gtest_discover_tests(session_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+=======
 # server_test
 add_executable(server_test tests/server_test.cc)
 target_link_libraries(server_test server_lib gtest_main gmock_main)
@@ -61,3 +80,4 @@ gtest_discover_tests(session_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/
 # Code coverage settings (also excluded in Docker)
 include(cmake/CodeCoverageReportConfig.cmake)
 generate_coverage_report(TARGETS session_lib server_lib server config_parser TESTS config_parser_test server_test session_test)
+>>>>>>> BASE      (9d5957 full server/session coverage: 86%)
