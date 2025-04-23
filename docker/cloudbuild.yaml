@@ -14,15 +14,15 @@ steps:
     '--cache-from', 'gcr.io/$PROJECT_ID/i-am-steve:base',
     '.'
   ]
-- name: 'gcr.io/cloud-builders/docker'
-  args: ['push', 'gcr.io/$PROJECT_ID/i-am-steve:base']
-- name: 'gcr.io/cloud-builders/docker'
-  args: [
-    'build',
-    '-f', 'docker/Dockerfile',
-    '-t', 'gcr.io/$PROJECT_ID/i-am-steve:latest',
-    '.'
-  ]
+# - name: 'gcr.io/cloud-builders/docker'
+#   args: ['push', 'gcr.io/$PROJECT_ID/i-am-steve:base']
+# - name: 'gcr.io/cloud-builders/docker'
+#   args: [
+#     'build',
+#     '-f', 'docker/Dockerfile',
+#     '-t', 'gcr.io/$PROJECT_ID/i-am-steve:latest',
+#     '.'
+#   ]
 
 # Coverage report
 - name: 'gcr.io/cloud-builders/docker'
