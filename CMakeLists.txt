@@ -36,6 +36,10 @@ add_library(config_parser src/config_parser.cc)
 add_executable(config_parser_main src/config_parser_main.cc)
 target_link_libraries(config_parser_main config_parser)
 
+# server/session related
+add_library(server_lib src/server.cc src/session.cc src/config_parser.cc)
+add_library(session_lib src/session.cc)
+
 # GoogleTest and test setup (excluded in Docker build)
 include(GoogleTest)
 add_subdirectory(/usr/src/googletest googletest)
@@ -45,10 +49,15 @@ gtest_discover_tests(config_parser_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE
 
 # server_test
 add_executable(server_test tests/server_test.cc)
-target_link_libraries(server_test server gtest_main gmock_main)
+target_link_libraries(server_test server_lib gtest_main gmock_main)
 gtest_discover_tests(server_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
 
 # session_test
+add_executable(session_test tests/session_test.cc)
+target_link_libraries(session_test session_lib gtest_main gmock_main)
+gtest_discover_tests(session_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+
+
 # Code coverage settings (also excluded in Docker)
 include(cmake/CodeCoverageReportConfig.cmake)
-generate_coverage_report(TARGETS server config_parser TESTS config_parser_test)
+generate_coverage_report(TARGETS session_lib server_lib server config_parser TESTS config_parser_test server_test session_test)
