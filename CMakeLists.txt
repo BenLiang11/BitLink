@@ -64,16 +64,6 @@ gtest_discover_tests(server_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/t
 add_executable(session_test tests/session_test.cc)
 target_link_libraries(session_test session_lib gtest_main gmock_main)
 gtest_discover_tests(session_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
-# server_test
-add_executable(server_test tests/server_test.cc)
-target_link_libraries(server_test server_lib gtest_main gmock_main)
-gtest_discover_tests(server_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
-
-# session_test
-add_executable(session_test tests/session_test.cc)
-target_link_libraries(session_test session_lib gtest_main gmock_main)
-gtest_discover_tests(session_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
-
 
 # Code coverage settings (also excluded in Docker)
 include(cmake/CodeCoverageReportConfig.cmake)
