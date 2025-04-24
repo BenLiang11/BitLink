@@ -3,7 +3,9 @@ FROM ubuntu:24.04 AS builder
 
 # Install required packages
 RUN apt-get update && \
-    apt-get install -y build-essential cmake libboost-all-dev
+    apt-get install -y build-essential cmake libboost-all-dev \
+    gcovr
+
 
 # Set workdir and copy project
 WORKDIR /usr/src/project

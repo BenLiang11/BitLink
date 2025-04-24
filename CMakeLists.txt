@@ -45,15 +45,18 @@ include(GoogleTest)
 # add_subdirectory(/usr/src/googletest googletest)
 if(NOT DOCKER_BUILD)
   include(GoogleTest)
-  add_subdirectory(third_party/googletest)
+
+  #Modified following line, unsure of purpose
+  #add_subdirectory(third_party/googletest)
+  add_subdirectory(/usr/src/googletest googletest)
 
   add_executable(config_parser_test tests/config_parser_test.cc)
   target_link_libraries(config_parser_test config_parser gtest_main)
   gtest_discover_tests(config_parser_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
-
-  include(cmake/CodeCoverageReportConfig.cmake)
-  generate_coverage_report(TARGETS server config_parser TESTS config_parser_test)
 endif()
+
+include(cmake/CodeCoverageReportConfig.cmake)
+generate_coverage_report(TARGETS server config_parser TESTS config_parser_test)
 
 # server_test
 add_executable(server_test tests/server_test.cc)
