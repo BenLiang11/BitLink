@@ -70,4 +70,16 @@ gtest_discover_tests(session_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/
 
 # Code coverage settings (also excluded in Docker)
 include(cmake/CodeCoverageReportConfig.cmake)
-generate_coverage_report(TARGETS session_lib server_lib server config_parser TESTS config_parser_test server_test session_test)
+if (NOT TARGET coverage)
+  generate_coverage_report(
+    TARGETS
+      session_lib
+      server_lib
+      server
+      config_parser
+    TESTS
+      config_parser_test
+      server_test
+      session_test
+  )
+endif()
