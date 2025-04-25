@@ -1,5 +1,5 @@
 # docker/coverage.Dockerfile
-FROM base AS builder
+FROM i-am-steve:base AS builder
 
 COPY . .
 
