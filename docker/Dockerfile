@@ -1,5 +1,5 @@
 ### Build/test container ###
-FROM ubuntu:24.04 AS builder
+FROM i-am-steve:base AS builder
 
 # Install required packages
 RUN apt-get update && \
@@ -13,7 +13,7 @@ COPY . .
 
 # Build the project
 # RUN mkdir -p build && cd build && cmake .. && make && ctest --output-on_failure
-RUN mkdir -p build && cd build && cmake -DDOCKER_BUILD=1 .. && make
+RUN mkdir -p build && cd build && cmake .. && make
 
 ### Deploy container ###
 FROM ubuntu:24.04 AS deploy
