@@ -14,8 +14,12 @@
 #include <stack>
 #include <string>
 #include <vector>
+#include <cctype>
 
 #include "config_parser.h"
+
+// Max depth of blocks to prevent infinite recursion
+const int MAX_CONFIG_DEPTH = 20;
 
 std::string NginxConfig::ToString(int depth) {
   std::string serialized_config;
@@ -64,9 +68,11 @@ const char* NginxConfigParser::TokenTypeAsString(TokenType type) {
   }
 }
 
-NginxConfigParser::TokenType NginxConfigParser::ParseToken(std::istream* input,
-                                                           std::string* value) {
+NginxConfigParser::TokenType
+NginxConfigParser::ParseToken(std::istream* input, std::string* value) {
   TokenParserState state = TOKEN_STATE_INITIAL_WHITESPACE;
+  *value = "";
+  
   while (input->good()) {
     const char c = input->get();
     if (!input->good()) {
@@ -163,6 +169,16 @@ NginxConfigParser::TokenType NginxConfigParser::ParseToken(std::istream* input,
           return TOKEN_TYPE_NORMAL;
         }
         *value += c;
+        continue;
+        
+      case TOKEN_STATE_ESCAPE_WITHIN_SINGLE_QUOTE:
+        *value += c;
+        state = TOKEN_STATE_SINGLE_QUOTE;
+        continue;
+      
+      case TOKEN_STATE_ESCAPE_WITHIN_DOUBLE_QUOTE:
+        *value += c;
+        state = TOKEN_STATE_DOUBLE_QUOTE;
         continue;
     }
   }

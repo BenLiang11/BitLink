@@ -1,0 +1,5 @@
+This is a simple text file that demonstrates the static file handler.
+It should be served with the appropriate Content-Type header (text/plain).
+
+You can also try accessing files that don't exist to test the 404 handling,
+for example by visiting /static/nonexistent.html 

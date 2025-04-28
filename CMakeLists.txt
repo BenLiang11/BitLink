@@ -26,10 +26,14 @@ set(Boost_USE_STATIC_LIBS ON)
 find_package(Boost 1.50 REQUIRED COMPONENTS system)
 message(STATUS "Boost version: ${Boost_VERSION}")
 
+# Project source files
 include_directories(include)
 
 # Server executable
-add_executable(server src/main.cc src/session.cc src/server.cc src/config_parser.cc)
+add_executable(server src/main.cc src/session.cc src/server.cc src/config_parser.cc
+                     src/request.cc src/response.cc src/mime_types.cc
+                     src/handlers/echo_handler.cc src/handlers/static_file_handler.cc)
+target_link_libraries(server Boost::system pthread)
 
 # config_parser related
 add_library(config_parser src/config_parser.cc)
@@ -37,8 +41,18 @@ add_executable(config_parser_main src/config_parser_main.cc)
 target_link_libraries(config_parser_main config_parser)
 
 # server/session related
-add_library(server_lib src/server.cc src/session.cc src/config_parser.cc)
-add_library(session_lib src/session.cc)
+add_library(server_lib src/server.cc src/session.cc src/config_parser.cc
+                      src/request.cc src/response.cc src/mime_types.cc
+                      src/handlers/echo_handler.cc src/handlers/static_file_handler.cc)
+add_library(session_lib src/session.cc src/request.cc src/response.cc
+                       src/handlers/echo_handler.cc src/mime_types.cc)
+add_library(handlers_lib src/handlers/echo_handler.cc src/handlers/static_file_handler.cc
+                        src/mime_types.cc)
+
+# request/response/mime_types related
+add_library(request_lib src/request.cc)
+add_library(response_lib src/response.cc)
+add_library(mime_types_lib src/mime_types.cc)
 
 # GoogleTest and test setup (excluded in Docker build)
 include(GoogleTest)
@@ -65,6 +79,28 @@ add_executable(session_test tests/session_test.cc)
 target_link_libraries(session_test session_lib gtest_main gmock_main)
 gtest_discover_tests(session_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
 
+# handler_tests
+add_executable(echo_handler_test tests/echo_handler_test.cc)
+target_link_libraries(echo_handler_test gtest_main gmock_main handlers_lib request_lib response_lib)
+gtest_discover_tests(echo_handler_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+
+add_executable(static_file_handler_test tests/static_file_handler_test.cc)
+target_link_libraries(static_file_handler_test gtest_main gmock_main mime_types_lib handlers_lib request_lib response_lib)
+gtest_discover_tests(static_file_handler_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+
+# New tests for request, response, and mime_types
+add_executable(request_test tests/request_test.cc)
+target_link_libraries(request_test gtest_main gmock_main request_lib)
+gtest_discover_tests(request_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+
+add_executable(response_test tests/response_test.cc)
+target_link_libraries(response_test gtest_main gmock_main response_lib)
+gtest_discover_tests(response_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+
+add_executable(mime_types_test tests/mime_types_test.cc)
+target_link_libraries(mime_types_test gtest_main gmock_main mime_types_lib)
+gtest_discover_tests(mime_types_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+
 # Code coverage settings (also excluded in Docker)
 include(cmake/CodeCoverageReportConfig.cmake)
 generate_coverage_report(
@@ -73,8 +109,17 @@ generate_coverage_report(
     server_lib
     server
     config_parser
+    request_lib
+    response_lib
+    mime_types_lib
+    handlers_lib
   TESTS
     config_parser_test
     server_test
-    session_test
+    session_test 
+    request_test
+    response_test
+    mime_types_test
+    echo_handler_test
+    static_file_handler_test
 )

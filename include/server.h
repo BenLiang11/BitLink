@@ -16,8 +16,7 @@ public:
   virtual void handle_accept(session* new_session,
     const boost::system::error_code& error);
 
-private:
-
+protected:
   boost::asio::io_service& io_service_;
   tcp::acceptor acceptor_;
 };
