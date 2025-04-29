@@ -14,7 +14,6 @@ using boost::asio::ip::tcp;
 
 class session {
 public:
-<<<<<<< HEAD
   session(boost::asio::io_service& io_service);
   
   /**
@@ -22,9 +21,6 @@ public:
    */
   virtual ~session() = default;
   
-=======
-  session(boost::asio::io_context& io_context); // changed to io_context
->>>>>>> e2d4752 (Complete Boost.Log setup with rotation, timestamps, and server logging)
   tcp::socket& socket();
   
   /**

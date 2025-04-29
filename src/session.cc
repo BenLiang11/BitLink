@@ -1,22 +1,11 @@
 #include "session.h"
-<<<<<<< HEAD
 #include "handlers/echo_handler.h"
-=======
-#include "logger.h"
->>>>>>> e2d4752 (Complete Boost.Log setup with rotation, timestamps, and server logging)
 #include <boost/bind.hpp>
-#include <boost/log/trivial.hpp>
-
 
 // Constructor for socket
-<<<<<<< HEAD
 session::session(boost::asio::io_service& io_service)
     : socket_(io_service),
       handler_(std::make_shared<EchoHandler>()) // Default to EchoHandler
-=======
-session::session(boost::asio::io_context& io_context)
-: socket_(io_context)
->>>>>>> e2d4752 (Complete Boost.Log setup with rotation, timestamps, and server logging)
 {
 }
 
@@ -46,8 +35,7 @@ void session::handle_read(const boost::system::error_code& error,
 {
   if (!error)
   {
-    BOOST_LOG_TRIVIAL(info) << "Received request: " << request_data;  
-    //request_data.assign(data_, bytes_transferred);
+    request_data.assign(data_, bytes_transferred);
 
     // Create a Request object from the raw data
     Request request(request_data);
@@ -77,7 +65,6 @@ void session::handle_read(const boost::system::error_code& error,
   }
   else
   {
-    BOOST_LOG_TRIVIAL(error) << "Read failed: " << error.message();  
     delete this;
   }
 }
@@ -87,7 +74,6 @@ void session::handle_write(const boost::system::error_code& error)
 {
   if (!error)
   {
-    BOOST_LOG_TRIVIAL(info) << "Sent response back to client.";  
     socket_.async_read_some(boost::asio::buffer(data_, max_length),
         boost::bind(&session::handle_read, this,
           boost::asio::placeholders::error,
@@ -95,8 +81,6 @@ void session::handle_write(const boost::system::error_code& error)
   }
   else
   {
-    BOOST_LOG_TRIVIAL(error) << "Write failed: " << error.message();  
-    // Handle error
     delete this;
   }
 }

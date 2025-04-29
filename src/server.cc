@@ -1,23 +1,18 @@
 #include "server.h"
-#include "session.h"
-#include "logger.h"
-#include <boost/log/trivial.hpp>
-#include <boost/bind.hpp>
-
+#include <boost/bind.hpp> 
 #include <iostream>
 
-server::server(boost::asio::io_context& io_context, short port)
-  : io_context_(io_context),
-    acceptor_(io_context, tcp::endpoint(tcp::v4(), port))
+server::server(boost::asio::io_service& io_service, short port)
+  : io_service_(io_service),
+    acceptor_(io_service, tcp::endpoint(tcp::v4(), port))
 {
-  init_logging();
-  BOOST_LOG_TRIVIAL(info) << "Server listening on port " << port;
+  std::cout << "Server listening on port " << port << std::endl;
   start_accept();
 }
 
 void server::start_accept()
 {
-  session* new_session = new session(io_context_);
+  session* new_session = new session(io_service_);
   acceptor_.async_accept(new_session->socket(),
       boost::bind(&server::handle_accept, this, new_session,
         boost::asio::placeholders::error));
@@ -28,17 +23,17 @@ void server::handle_accept(session* new_session,
 {
   if (!error)
   {
-    BOOST_LOG_TRIVIAL(info) << "Accepted new client connection: " 
-    << new_session->socket().remote_endpoint();
-
     new_session->start();
   }
   else
   {
-    BOOST_LOG_TRIVIAL(error) << "Failed to accept client connection: " << error.message();
-
     delete new_session;
   }
 
   start_accept();
 }
+
+
+
+
+
