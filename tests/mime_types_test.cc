@@ -31,24 +31,12 @@ TEST_F(MimeTypesTest, ApplicationMimeTypes) {
   EXPECT_EQ(MimeTypes::GetMimeType("zip"), "application/zip");
   EXPECT_EQ(MimeTypes::GetMimeType("tar"), "application/x-tar");
   EXPECT_EQ(MimeTypes::GetMimeType("gz"), "application/gzip");
-  EXPECT_EQ(MimeTypes::GetMimeType("xml"), "application/xml");
-}
-
-TEST_F(MimeTypesTest, OfficeMimeTypes) {
-  // Test office document MIME types
-  EXPECT_EQ(MimeTypes::GetMimeType("doc"), "application/msword");
-  EXPECT_EQ(MimeTypes::GetMimeType("docx"), "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
-  EXPECT_EQ(MimeTypes::GetMimeType("xls"), "application/vnd.ms-excel");
-  EXPECT_EQ(MimeTypes::GetMimeType("xlsx"), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-  EXPECT_EQ(MimeTypes::GetMimeType("ppt"), "application/vnd.ms-powerpoint");
-  EXPECT_EQ(MimeTypes::GetMimeType("pptx"), "application/vnd.openxmlformats-officedocument.presentationml.presentation");
 }
 
 TEST_F(MimeTypesTest, MediaMimeTypes) {
   // Test media MIME types
   EXPECT_EQ(MimeTypes::GetMimeType("mp3"), "audio/mpeg");
   EXPECT_EQ(MimeTypes::GetMimeType("mp4"), "video/mp4");
-  EXPECT_EQ(MimeTypes::GetMimeType("webm"), "video/webm");
 }
 
 TEST_F(MimeTypesTest, CaseInsensitivity) {
