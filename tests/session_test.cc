@@ -4,11 +4,11 @@
 
 class SessionCoverageTest : public ::testing::Test {
  protected:
-  boost::asio::io_service io_service;
+ boost::asio::io_context io_context;
 };
 
 TEST_F(SessionCoverageTest, HandleReadParsesRequestData) {
-  session s(io_service);
+  session s(io_context);
 
   // 1) seed the internal buffer
   const char raw[] = "GET /foo HTTP/1.1\r\n\r\n";
@@ -22,7 +22,7 @@ TEST_F(SessionCoverageTest, HandleReadParsesRequestData) {
 }
 
 TEST_F(SessionCoverageTest, HandleWriteSchedulesAnotherRead) {
-  session s(io_service);
+  session s(io_context); 
 
   // This simply drives the 'no error' branch of handle_write:
   // -> socket_.async_read_some(...)
@@ -33,7 +33,7 @@ TEST_F(SessionCoverageTest, HandleWriteSchedulesAnotherRead) {
 
 // cover session::start() ⟶ calls async_read_some(...)
 TEST_F(SessionCoverageTest, StartSchedulesAsyncRead) {
-  session s(io_service);
+  session s(io_context);
   // if this compiles and runs, we executed the body of session::start()
   EXPECT_NO_THROW(s.start());
 }

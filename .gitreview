@@ -1,0 +1,5 @@
+[gerrit]
+host=code.cs130.org
+port=29418
+project=i-am-steve
+defaultbranch=main

@@ -9,7 +9,7 @@ using boost::asio::ip::tcp;
 class server
 {
 public:
-  server(boost::asio::io_service& io_service, short port);
+  server(boost::asio::io_context& io_context, short port);
 
   virtual void start_accept();
 
@@ -17,7 +17,7 @@ public:
     const boost::system::error_code& error);
 
 protected:
-  boost::asio::io_service& io_service_;
+  boost::asio::io_context& io_context_;
   tcp::acceptor acceptor_;
 };
 

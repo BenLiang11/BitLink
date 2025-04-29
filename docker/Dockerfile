@@ -21,6 +21,9 @@ FROM ubuntu:24.04 AS deploy
 # Set working directory
 WORKDIR /app
 
+# Create logs directory for Boost.Log
+RUN mkdir -p logs
+
 # Copy the built server binary
 COPY --from=builder /usr/src/project/build/bin/server ./server
 

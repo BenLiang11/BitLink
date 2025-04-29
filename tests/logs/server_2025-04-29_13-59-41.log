@@ -1,0 +1,2 @@
+[2025-04-29 13:59:41] [Thread 0x000000010360c580] [info] Server listening on port 8080
+[2025-04-29 13:59:41] [Thread 0x000000010360c580] [error] Failed to accept client connection: Operation canceled

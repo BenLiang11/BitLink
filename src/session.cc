@@ -1,10 +1,12 @@
 #include "session.h"
 #include "handlers/echo_handler.h"
 #include <boost/bind.hpp>
+#include "logger.h"
+#include <boost/log/trivial.hpp>
 
 // Constructor for socket
-session::session(boost::asio::io_service& io_service)
-    : socket_(io_service),
+session::session(boost::asio::io_context& io_context)  // service changed to io_context
+    : socket_(io_context),
       handler_(std::make_shared<EchoHandler>()) // Default to EchoHandler
 {
 }
@@ -37,6 +39,8 @@ void session::handle_read(const boost::system::error_code& error,
   {
     request_data.assign(data_, bytes_transferred);
 
+    BOOST_LOG_TRIVIAL(info) << "Received request: " << request_data;
+
     // Create a Request object from the raw data
     Request request(request_data);
     
@@ -65,6 +69,7 @@ void session::handle_read(const boost::system::error_code& error,
   }
   else
   {
+    BOOST_LOG_TRIVIAL(error) << "Read failed: " << error.message();
     delete this;
   }
 }
@@ -74,6 +79,7 @@ void session::handle_write(const boost::system::error_code& error)
 {
   if (!error)
   {
+    BOOST_LOG_TRIVIAL(info) << "Sent response back to client.";
     socket_.async_read_some(boost::asio::buffer(data_, max_length),
         boost::bind(&session::handle_read, this,
           boost::asio::placeholders::error,
@@ -81,6 +87,7 @@ void session::handle_write(const boost::system::error_code& error)
   }
   else
   {
+    BOOST_LOG_TRIVIAL(error) << "Write failed: " << error.message();
     delete this;
   }
 }

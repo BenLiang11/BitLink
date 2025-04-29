@@ -14,8 +14,7 @@ using boost::asio::ip::tcp;
 
 class session {
 public:
-  session(boost::asio::io_service& io_service);
-  
+  session(boost::asio::io_context& io_context);  
   /**
    * @brief Virtual destructor to ensure proper cleanup of derived classes.
    */
