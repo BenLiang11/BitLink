@@ -6,13 +6,23 @@
 #include <map>
 #include "server.h"
 #include "session.h"
+<<<<<<< HEAD
 #include "handlers/base_handler.h"
 #include "handlers/echo_handler.h"
 #include "handlers/static_file_handler.h"
 #include "config_parser.h"
+=======
+
+#include "logger.h"  // Boost.Log 추가
+#include <boost/log/trivial.hpp> 
+#include "../include/config_parser.h"
+>>>>>>> e2d4752 (Complete Boost.Log setup with rotation, timestamps, and server logging)
 
 int main(int argc, char* argv[])
 {
+  init_logging();
+  BOOST_LOG_TRIVIAL(info) << "Server starting up...";  
+
   try
   {
     if (argc != 2)
@@ -75,7 +85,7 @@ int main(int argc, char* argv[])
     }
 
     // Create I/O service
-    boost::asio::io_service io_service;
+    boost::asio::io_context io_context; // changed to io_context
 
     // Create a custom server that will set handlers based on request path
     // This is a placeholder for the actual server implementation
@@ -109,16 +119,25 @@ int main(int argc, char* argv[])
       std::map<std::string, std::shared_ptr<RequestHandler>> handlers_;
     };
 
+<<<<<<< HEAD
     // Start service on read port with configured handlers
     handler_server s(io_service, port, path_to_handler);
 
     std::cout << "Server running on port " << port << std::endl;
     io_service.run();
+=======
+    //Start service on read port
+    server s(io_context, port); // changed to io_context
+
+    io_context.run();
+>>>>>>> e2d4752 (Complete Boost.Log setup with rotation, timestamps, and server logging)
   }
   catch (std::exception& e)
   {
     std::cerr << "Exception: " << e.what() << "\n";
   }
+
+  BOOST_LOG_TRIVIAL(info) << "Server shutting down..."; 
 
   return 0;
 }
