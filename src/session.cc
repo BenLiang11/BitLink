@@ -5,9 +5,10 @@
 #include <boost/log/trivial.hpp>
 
 // Constructor for socket
-session::session(boost::asio::io_context& io_context)  // service changed to io_context
+
+session::session(boost::asio::io_context& io_context, const HandlerDispatcher& handler_dispatcher)
     : socket_(io_context),
-      handler_(std::make_shared<EchoHandler>()) // Default to EchoHandler
+      handler_dispatcher_(handler_dispatcher)
 {
 }
 
@@ -43,7 +44,11 @@ void session::handle_read(const boost::system::error_code& error,
 
     // Create a Request object from the raw data
     Request request(request_data);
-    
+
+    // Get the appropriate handler for the request path
+    std::shared_ptr<RequestHandler> handler = handler_dispatcher_.GetHandler(request.uri());
+    set_handler(handler);
+
     // Create a Response object
     Response response;
     
@@ -51,10 +56,10 @@ void session::handle_read(const boost::system::error_code& error,
     if (handler_) {
       handler_->HandleRequest(request, &response);
     } else {
-      // Fallback if no handler is set
-      response.set_status(Response::OK);
-      response.set_header("Content-Type", "text/plain");
-      response.set_body(request_data);
+      // 404 if no handler is set
+      response.set_status(Response::NOT_FOUND);
+      response.set_header("Content-Type", "text/html");
+      response.set_body("<html><body><h1>404 Not Found</h1><p>The requested file could not be found.</p></body></html>");
       response.set_header("Connection", "close");
     }
     

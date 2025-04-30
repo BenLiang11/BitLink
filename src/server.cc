@@ -5,9 +5,11 @@
 #include "logger.h"
 #include <boost/log/trivial.hpp>
 
-server::server(boost::asio::io_context& io_context, short port)
+
+server::server(boost::asio::io_context& io_context, short port, const HandlerDispatcher& handler_dispatcher)
   : io_context_(io_context),
-    acceptor_(io_context, tcp::endpoint(tcp::v4(), port))
+    acceptor_(io_context, tcp::endpoint(tcp::v4(), port)),
+    handler_dispatcher_(handler_dispatcher)
 {
   std::cout << "Server listening on port " << port << std::endl;
   init_logging();
@@ -17,7 +19,7 @@ server::server(boost::asio::io_context& io_context, short port)
 
 void server::start_accept()
 {
-  session* new_session = new session(io_context_);
+  session* new_session = new session(io_context_, handler_dispatcher_);
   acceptor_.async_accept(new_session->socket(),
       boost::bind(&server::handle_accept, this, new_session,
         boost::asio::placeholders::error));

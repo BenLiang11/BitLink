@@ -29,7 +29,6 @@ TEST_F(NginxConfigParserTestFixture, emptyConfig) {
 // Test 4: 
 TEST_F(NginxConfigParserTestFixture, nestedLoopConfig) {
   bool success = parser.Parse("test_configs/nested_loop_config", &out_config);
-  std::cout << out_config.ToString() << std::endl; // adds a space after "/" in the example txt file
   EXPECT_TRUE(success);
 }
 
@@ -46,6 +45,7 @@ TEST_F(NginxConfigParserTestFixture, numberBeforeColonConfig) {
 // Test 7: empty statements {}
 TEST_F(NginxConfigParserTestFixture, emptyStatementsConfig) {
   bool success = parser.Parse("test_configs/empty_statements_config", &out_config);
+  std::cout << "HELLOO" << std::endl; // adds a space after "/" in the example txt file
   EXPECT_TRUE(success);
 }
 

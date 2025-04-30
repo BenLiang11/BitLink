@@ -28,10 +28,15 @@ RUN mkdir -p /app/logs
 COPY --from=builder /usr/src/project/build/bin/server ./server
 
 # Copy the config file into container
-COPY config/test.conf ./config/test.conf
+COPY config/server_config.conf ./config/server_config.conf
+
+# Create data directory and copy static content
+RUN mkdir -p ./data
+COPY data/static1 ./data/static1
+COPY data/static2 ./data/static2
 
 # Expose port 80 (just for reference, not mandatory)
 EXPOSE 80
 
 # Run the server with config
-CMD ["./server", "./config/test.conf"]
+CMD ["./server", "./config/server_config.conf"]

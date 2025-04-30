@@ -9,12 +9,15 @@
 #include "handlers/base_handler.h"
 #include "request.h"
 #include "response.h"
+#include "handler_dispatcher.h"
 
 using boost::asio::ip::tcp;
 
 class session {
 public:
-  session(boost::asio::io_context& io_context);  
+
+  session(boost::asio::io_service& io_context, const HandlerDispatcher& handler_dispatcher);
+  
   /**
    * @brief Virtual destructor to ensure proper cleanup of derived classes.
    */
@@ -51,6 +54,7 @@ private:
 
   std::string request_data;
   std::shared_ptr<RequestHandler> handler_;
+  const HandlerDispatcher& handler_dispatcher_;
 };
 
 #endif
