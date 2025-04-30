@@ -24,24 +24,27 @@ void server::start_accept()
 }
 
 void server::handle_accept(session* new_session,
-    const boost::system::error_code& error)
+  const boost::system::error_code& error)
 {
-  if (!error)
-  {
-
+if (!error)
+{
+  try {
     BOOST_LOG_TRIVIAL(info) << "Accepted new client connection: " 
-    << new_session->socket().remote_endpoint();
-    new_session->start();
-  }
-  else
-  {
-    BOOST_LOG_TRIVIAL(error) << "Failed to accept client connection: " << error.message() ;
-    delete new_session;
+                            << new_session->socket().remote_endpoint();
+  } catch (const boost::system::system_error& e) {
+    BOOST_LOG_TRIVIAL(warning) << "Failed to get remote endpoint: " << e.what();
   }
 
-  start_accept();
+  new_session->start();
+}
+else
+{
+  BOOST_LOG_TRIVIAL(error) << "Failed to accept client connection: " << error.message();
+  delete new_session;
 }
 
+start_accept();
+}
 
 
 

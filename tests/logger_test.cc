@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <string>
 #include <iostream>
+#include <thread>
 
 #include "logger.h"
 #include <boost/log/trivial.hpp>
@@ -10,8 +11,11 @@
 namespace fs = std::filesystem;
 
 TEST(LoggerTest, LogFileCreation) {
-    init_logging();  // ensure logger is initialized for this test
+    init_logging();
     BOOST_LOG_TRIVIAL(info) << "LoggerTest: Checking log file creation.";
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(300));
+
 
     EXPECT_TRUE(fs::exists("logs")); // check logs directory exists
 
@@ -20,6 +24,10 @@ TEST(LoggerTest, LogFileCreation) {
 }
 
 TEST(LoggerTest, LogFileContent) {
+    init_logging();
+    BOOST_LOG_TRIVIAL(info) << "starting up"; 
+    std::this_thread::sleep_for(std::chrono::milliseconds(300));
+
     bool found = false;
 
     for (const auto& entry : fs::directory_iterator("logs")) {
@@ -33,5 +41,6 @@ TEST(LoggerTest, LogFileContent) {
         }
     }
 
+    
     EXPECT_TRUE(found);  // check if the log file contains "starting up"
 }

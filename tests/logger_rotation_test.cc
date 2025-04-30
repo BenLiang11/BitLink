@@ -4,7 +4,7 @@
 #include <string>
 #include <chrono>
 #include <thread>
-#include "../src/logger.h"
+#include "../include/logger.h"
 #include <boost/log/trivial.hpp>
 
 namespace fs = std::filesystem;

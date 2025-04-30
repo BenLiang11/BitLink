@@ -43,11 +43,11 @@ include_directories(include)
 add_executable(server src/main.cc src/session.cc src/server.cc src/config_parser.cc src/logger.cc
                      src/request.cc src/response.cc src/mime_types.cc
                      src/handlers/echo_handler.cc src/handlers/static_file_handler.cc)
-target_link_libraries(server Boost::system Boost::log Boost::log_setup Boost::date_time)
+target_link_libraries(server Boost::system Boost::log Boost::log_setup Boost::date_time pthread)
 
 # Logging library
 add_library(logger_lib src/logger.cc)
-target_link_libraries(logger_lib Boost::log Boost::log_setup Boost::date_time)
+target_link_libraries(logger_lib Boost::log Boost::log_setup Boost::date_time pthread)
 
 # config_parser related
 add_library(config_parser src/config_parser.cc)
