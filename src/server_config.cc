@@ -30,9 +30,15 @@ bool ServerConfig::ParseConfig(const NginxConfig& config) {
             
             // Static handlers must specify a root directory
             if (location.handler_type == "static") {
-                if (statement->tokens_.size() >= 5 && statement->tokens_[3] == "root") {
-                    location.root_directory = statement->tokens_[4];
-                } else {
+                auto& next_statement = statement->child_block_->statements_[0];
+                if (next_statement->tokens_.size() == 2 && next_statement->tokens_[0] == "root")
+                {
+                    location.root_directory = next_statement->tokens_[1];
+                    std::cout << "Static handler for path " << location.path 
+                              << " has root directory " << location.root_directory << std::endl;
+                }
+                else
+                {
                     std::cerr << "Static handler for path " << location.path 
                               << " must specify a root directory" << std::endl;
                     return false;
