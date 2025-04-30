@@ -1,0 +1,2 @@
+Static2 Test Directory
+This directory contains test files for static file handling.
