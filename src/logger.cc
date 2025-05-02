@@ -30,6 +30,18 @@ void init_logging() {
         )
     );
     
+    // Add console logging to stdout with the same format
+    logging::add_console_log(
+        std::cout,
+        keywords::format = (
+            expr::stream
+                << "[" << expr::format_date_time<boost::posix_time::ptime>("TimeStamp", "%Y-%m-%d %H:%M:%S")
+                << "] [Thread " << expr::attr<boost::log::attributes::current_thread_id::value_type>("ThreadID")
+                << "] [" << logging::trivial::severity
+                << "] " << expr::smessage
+        )
+    );
+
     logging::core::get()->set_filter(
         logging::trivial::severity >= logging::trivial::info
     );
