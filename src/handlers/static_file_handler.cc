@@ -1,13 +1,15 @@
 #include "handlers/static_file_handler.h"
 #include "mime_types.h"
+#include "request.h"
 #include <fstream>
 #include <sstream>
 #include <filesystem>
+#include <iostream>
 
 namespace fs = std::filesystem;
 
-StaticFileHandler::StaticFileHandler(const std::string& root_dir)
-    : root_dir_(root_dir) {
+StaticFileHandler::StaticFileHandler(const std::string& root_dir, const std::string& api_path)
+    : root_dir_(root_dir), api_path_(api_path) {
     // Ensure root_dir_ ends with a slash
     if (!root_dir_.empty() && root_dir_.back() != '/') {
         root_dir_ += '/';
@@ -24,8 +26,9 @@ bool StaticFileHandler::HandleRequest(const Request& request, Response* response
     }
     
     // Map the URI to a file path
-    std::string file_path = MapUriToFilePath(request.uri());
-    
+    std::string file_path = MapUriToFilePath(request.get_file_path(api_path_));
+    std::cout << "Serving File Path: " << file_path << std::endl;
+
     // Read the file into memory
     std::string content;
     if (!ReadFile(file_path, &content)) {

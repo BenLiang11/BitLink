@@ -69,6 +69,14 @@ public:
      */
     const std::string& raw_request() const { return raw_request_; }
 
+    /**
+     * @brief Get the file path from the request URI
+     * 
+     * @param api_path The API path.
+     * @return std::string The file path.
+     */
+    std::string get_file_path(const std::string& api_path) const;
+
 private:
     std::string raw_request_;
     std::string method_;

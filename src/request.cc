@@ -89,4 +89,22 @@ void Request::parse_request() {
     if (!body_.empty() && body_.back() == '\n') {
         body_.pop_back();
     }
-} 
+}
+
+std::string Request::get_file_path(const std::string& api_path) const {
+    // Remove leading slash if present
+    std::string path = api_path;
+    if (!path.empty() && path[0] == '/') {
+        path.erase(0, 1);
+
+    }
+
+    // Remove the api path from uri to get the file path
+    size_t pos = uri_.find(path);
+    
+    if (pos != std::string::npos) {
+        return uri_.substr(pos + path.length());
+    }
+
+    return "";
+}

@@ -64,7 +64,7 @@ add_library(session_lib src/session.cc src/request.cc src/response.cc
                        src/handlers/echo_handler.cc src/mime_types.cc
                        src/server.cc src/handler_server.cc src/handler_dispatcher.cc)
 add_library(handlers_lib src/handlers/echo_handler.cc src/handlers/static_file_handler.cc
-                        src/mime_types.cc)
+                        src/mime_types.cc src/request.cc src/response.cc)
 
 # request/response/mime_types related
 add_library(request_lib src/request.cc)

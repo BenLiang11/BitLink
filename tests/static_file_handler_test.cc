@@ -50,12 +50,12 @@ protected:
     png_file.write(reinterpret_cast<const char*>(png_data), sizeof(png_data));
     png_file.close();
     
-    // Initialize the handler with the temp directory
-    handler_ = std::make_unique<StaticFileHandler>(temp_dir_.string());
+    // Initialize the handler with the temp directory and api path
+    handler_ = std::make_unique<StaticFileHandler>(temp_dir_.string(), "/static");
     
     // Create an alternate handler for testing root directory with trailing slash
     std::string root_with_slash = temp_dir_.string() + "/";
-    handler_with_slash_ = std::make_unique<StaticFileHandler>(root_with_slash);
+    handler_with_slash_ = std::make_unique<StaticFileHandler>(root_with_slash, "/static");
   }
   
   void TearDown() override {
@@ -71,7 +71,7 @@ protected:
 TEST_F(StaticFileHandlerTest, ServeHtmlFile) {
   // Create a request for index.html
   std::string raw_request = 
-      "GET /index.html HTTP/1.1\r\n"
+      "GET /static/index.html HTTP/1.1\r\n"
       "Host: localhost:8080\r\n"
       "\r\n";
   
@@ -100,7 +100,7 @@ TEST_F(StaticFileHandlerTest, ServeHtmlFile) {
 TEST_F(StaticFileHandlerTest, ServeTxtFile) {
   // Create a request for test.txt
   std::string raw_request = 
-      "GET /test.txt HTTP/1.1\r\n"
+      "GET /static/test.txt HTTP/1.1\r\n"
       "Host: localhost:8080\r\n"
       "\r\n";
   
@@ -129,7 +129,7 @@ TEST_F(StaticFileHandlerTest, ServeTxtFile) {
 TEST_F(StaticFileHandlerTest, ServeImageFile) {
   // Create a request for test.jpg
   std::string raw_request = 
-      "GET /test.jpg HTTP/1.1\r\n"
+      "GET /static/test.jpg HTTP/1.1\r\n"
       "Host: localhost:8080\r\n"
       "\r\n";
   
@@ -155,7 +155,7 @@ TEST_F(StaticFileHandlerTest, ServeImageFile) {
 TEST_F(StaticFileHandlerTest, ServePngFile) {
   // Create a request for test.png
   std::string raw_request = 
-      "GET /test.png HTTP/1.1\r\n"
+      "GET /static/test.png HTTP/1.1\r\n"
       "Host: localhost:8080\r\n"
       "\r\n";
   
@@ -181,7 +181,7 @@ TEST_F(StaticFileHandlerTest, ServePngFile) {
 TEST_F(StaticFileHandlerTest, ServeFileInSubdirectory) {
   // Create a request for subdirectory file
   std::string raw_request = 
-      "GET /subdir/file.txt HTTP/1.1\r\n"
+      "GET /static/subdir/file.txt HTTP/1.1\r\n"
       "Host: localhost:8080\r\n"
       "\r\n";
   
@@ -210,7 +210,7 @@ TEST_F(StaticFileHandlerTest, ServeFileInSubdirectory) {
 TEST_F(StaticFileHandlerTest, ServeIndexForDirectory) {
   // Create a request for the root directory 
   std::string raw_request = 
-      "GET / HTTP/1.1\r\n"
+      "GET /static/ HTTP/1.1\r\n"
       "Host: localhost:8080\r\n"
       "\r\n";
   
@@ -239,7 +239,7 @@ TEST_F(StaticFileHandlerTest, ServeIndexForDirectory) {
 TEST_F(StaticFileHandlerTest, ServeDirectoryWithTrailingSlash) {
   // Create a request for a subdirectory with trailing slash
   std::string raw_request = 
-      "GET /subdir/ HTTP/1.1\r\n"
+      "GET /static/subdir/ HTTP/1.1\r\n"
       "Host: localhost:8080\r\n"
       "\r\n";
   
@@ -265,7 +265,7 @@ TEST_F(StaticFileHandlerTest, UnknownExtensionDefaultsToOctetStream) {
   
   // Create a request for the unknown file
   std::string raw_request = 
-      "GET /unknown.xyz HTTP/1.1\r\n"
+      "GET /static/unknown.xyz HTTP/1.1\r\n"
       "Host: localhost:8080\r\n"
       "\r\n";
   
@@ -291,7 +291,7 @@ TEST_F(StaticFileHandlerTest, UnknownExtensionDefaultsToOctetStream) {
 TEST_F(StaticFileHandlerTest, FileNotFound) {
   // Create a request for a non-existent file
   std::string raw_request = 
-      "GET /nonexistent.html HTTP/1.1\r\n"
+      "GET /static/nonexistent.html HTTP/1.1\r\n"
       "Host: localhost:8080\r\n"
       "\r\n";
   
@@ -320,7 +320,7 @@ TEST_F(StaticFileHandlerTest, FileNotFound) {
 TEST_F(StaticFileHandlerTest, InvalidMethod) {
   // Create a POST request (which is not supported)
   std::string raw_request = 
-      "POST /index.html HTTP/1.1\r\n"
+      "POST /static/index.html HTTP/1.1\r\n"
       "Host: localhost:8080\r\n"
       "\r\n";
   
@@ -340,7 +340,7 @@ TEST_F(StaticFileHandlerTest, InvalidMethod) {
 TEST_F(StaticFileHandlerTest, RootDirectoryWithTrailingSlash) {
   // Create a request for index.html
   std::string raw_request = 
-      "GET /index.html HTTP/1.1\r\n"
+      "GET /static/index.html HTTP/1.1\r\n"
       "Host: localhost:8080\r\n"
       "\r\n";
   
@@ -362,12 +362,10 @@ TEST_F(StaticFileHandlerTest, RootDirectoryWithTrailingSlash) {
 
 // Direct tests for the StaticFileHandler methods
 TEST_F(StaticFileHandlerTest, TestMimeTypeUtility) {
-  // These can be tested directly by accessing GetMimeType through the public API
   // Create handler to test with
-  StaticFileHandler handler(temp_dir_.string());
+  StaticFileHandler handler(temp_dir_.string(), "/static");
   
-  // Test various file extensions - these tests and those above will drive 
-  // more code coverage for the mime_types.cc file
+  // Test various file extensions
   EXPECT_EQ(MimeTypes::GetMimeType("html"), "text/html");
   EXPECT_EQ(MimeTypes::GetMimeType("txt"), "text/plain");
   EXPECT_EQ(MimeTypes::GetMimeType("jpg"), "image/jpeg");

@@ -12,7 +12,7 @@ protected:
   void SetUp() override {
     // Create mock handlers for different paths
     echo_handler = std::make_shared<EchoHandler>();
-    static_handler = std::make_shared<StaticFileHandler>("./static");
+    static_handler = std::make_shared<StaticFileHandler>("./static", "/static");
     
     // Set up path mapping
     path_to_handler["/echo"] = echo_handler;

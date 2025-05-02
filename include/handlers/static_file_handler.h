@@ -18,7 +18,7 @@ public:
      * 
      * @param root_dir The root directory from which to serve files.
      */
-    explicit StaticFileHandler(const std::string& root_dir);
+    explicit StaticFileHandler(const std::string& root_dir, const std::string& api_path);
 
     /**
      * @brief Handle an HTTP request by serving a static file.
@@ -31,7 +31,7 @@ public:
 
 private:
     std::string root_dir_;
-
+    std::string api_path_;
     /**
      * @brief Get the MIME type for a file based on its extension.
      * 

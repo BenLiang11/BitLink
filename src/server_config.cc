@@ -73,7 +73,7 @@ std::map<std::string, std::shared_ptr<RequestHandler>> ServerConfig::CreateHandl
             path_to_handler[location.path] = std::make_shared<EchoHandler>();
             std::cout << "Added echo handler for path: " << location.path << std::endl;
         } else if (location.handler_type == "static") {
-            path_to_handler[location.path] = std::make_shared<StaticFileHandler>(location.root_directory);
+            path_to_handler[location.path] = std::make_shared<StaticFileHandler>(location.root_directory, location.path);
             std::cout << "Added static file handler for path: " << location.path 
                       << " with root: " << location.root_directory << std::endl;
         }
