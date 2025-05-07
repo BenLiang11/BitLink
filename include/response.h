@@ -4,81 +4,44 @@
 #include <string>
 #include <map>
 
-/**
- * @brief Represents an HTTP response.
- * 
- * This class encapsulates an HTTP response with its status code, headers,
- * and body.
- */
+// HTTP response with status code, headers, and body
 class Response {
 public:
-    /**
-     * @brief HTTP status codes.
-     */
+    // HTTP Status codes
     enum StatusCode {
         OK = 200,
+        CREATED = 201,
+        NO_CONTENT = 204,
+        BAD_REQUEST = 400,
+        UNAUTHORIZED = 401,
+        FORBIDDEN = 403,
         NOT_FOUND = 404,
-        INTERNAL_SERVER_ERROR = 500
+        INTERNAL_SERVER_ERROR = 500,
+        NOT_IMPLEMENTED = 501,
+        SERVICE_UNAVAILABLE = 503
     };
 
-    /**
-     * @brief Construct a new Response object.
-     */
+    // Default‑construct with 200 OK
     Response() : status_(OK) {}
 
-    /**
-     * @brief Set the HTTP status code.
-     * 
-     * @param status The status code.
-     */
+    // Set/Get status
     void set_status(StatusCode status) { status_ = status; }
-
-    /**
-     * @brief Get the HTTP status code.
-     * 
-     * @return StatusCode The status code.
-     */
     StatusCode status() const { return status_; }
 
-    /**
-     * @brief Set a specific header value.
-     * 
-     * @param name The header name.
-     * @param value The header value.
-     */
+    // Set/Get header
     void set_header(const std::string& name, const std::string& value) {
         headers_[name] = value;
     }
-
-    /**
-     * @brief Get all headers.
-     * 
-     * @return const std::map<std::string, std::string>& All headers.
-     */
     const std::map<std::string, std::string>& headers() const { return headers_; }
 
-    /**
-     * @brief Set the response body.
-     * 
-     * @param body The response body.
-     */
+    // Set/Get body
     void set_body(const std::string& body) { 
         body_ = body;
         set_header("Content-Length", std::to_string(body_.length()));
     }
-
-    /**
-     * @brief Get the response body.
-     * 
-     * @return const std::string& The response body.
-     */
     const std::string& body() const { return body_; }
 
-    /**
-     * @brief Convert the response to a string.
-     * 
-     * @return std::string The full HTTP response as a string.
-     */
+    // Render full HTTP response
     std::string to_string() const;
 
 private:
@@ -86,12 +49,7 @@ private:
     std::map<std::string, std::string> headers_;
     std::string body_;
 
-    /**
-     * @brief Get the string representation of a status code.
-     * 
-     * @param status The status code.
-     * @return std::string The string representation.
-     */
+    // Convert status code to text
     static std::string status_to_string(StatusCode status);
 };
 
