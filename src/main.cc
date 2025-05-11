@@ -37,10 +37,12 @@ int main(int argc, char* argv[]) {
       std::cerr << "Failed to parse server configuration\n";
       return 1;
     }
-    // Create handlers based on configuration
-    auto path_to_handler = server_config.CreateHandlers();
     
-    HandlerDispatcher handler_dispatcher(path_to_handler);  
+    // Create handler registrations based on configuration
+    auto handler_registrations = server_config.CreateHandlerRegistrations();
+    
+    // Create handler dispatcher with the registrations
+    HandlerDispatcher handler_dispatcher(handler_registrations);  
 
     boost::asio::io_context io_context;
 

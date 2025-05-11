@@ -5,7 +5,6 @@
 #include <boost/log/trivial.hpp>
 
 // Constructor for socket
-
 session::session(boost::asio::io_context& io_context, const HandlerDispatcher& handler_dispatcher)
     : socket_(io_context),
       handler_dispatcher_(handler_dispatcher)
@@ -18,10 +17,11 @@ tcp::socket& session::socket()
   return socket_;
 }
 
-void session::set_handler(std::shared_ptr<RequestHandler> handler)
-{
-  handler_ = handler;
-}
+// No longer need to set_handler since we create a unique_ptr for each request
+// void session::set_handler(std::shared_ptr<RequestHandler> handler)
+// {
+//   handler_ = handler;
+// }
 
 // Begins async read operation on socket
 void session::start()
@@ -46,25 +46,26 @@ void session::handle_read(const boost::system::error_code& error,
     Request request(request_data);
 
     // Get the appropriate handler for the request path
-    std::shared_ptr<RequestHandler> handler = handler_dispatcher_.GetHandler(request.uri());
-    set_handler(handler);
+    // Instead of reusing a shared_ptr, create a new unique_ptr for each request
+    std::unique_ptr<RequestHandler> handler = handler_dispatcher_.CreateHandlerForRequest(request);
 
     // Create a Response object
-    Response response;
+    std::unique_ptr<Response> response;
     
     // Handle the request using the appropriate handler
-    if (handler_) {
-      handler_->HandleRequest(request, &response);
+    if (handler) {
+      response = handler->handle_request(request);
     } else {
-      // 404 if no handler is set
-      response.set_status(Response::NOT_FOUND);
-      response.set_header("Content-Type", "text/html");
-      response.set_body("<html><body><h1>404 Not Found</h1><p>The requested file could not be found.</p></body></html>");
-      response.set_header("Connection", "close");
+      // 404 if no handler is available
+      response = std::make_unique<Response>();
+      response->set_status(Response::NOT_FOUND);
+      response->set_header("Content-Type", "text/html");
+      response->set_body("<html><body><h1>404 Not Found</h1><p>The requested file could not be found.</p></body></html>");
+      response->set_header("Connection", "close");
     }
     
     // Convert the response to a string
-    std::string response_str = response.to_string();
+    std::string response_str = response->to_string();
     
     // Write the response
     boost::asio::async_write(socket_,

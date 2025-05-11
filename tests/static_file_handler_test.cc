@@ -3,15 +3,26 @@
 #include "request.h"
 #include "response.h"
 #include "mime_types.h"
+#include "handler_registry.h"
 #include <fstream>
 #include <filesystem>
 #include <iostream>
+#include <memory>
 
 namespace fs = std::filesystem;
 
+/**
+ * @brief Test fixture for StaticFileHandler tests
+ * 
+ * Creates a temporary directory structure with test files
+ * to verify the functionality of the static file handler.
+ */
 class StaticFileHandlerTest : public ::testing::Test {
 protected:
   void SetUp() override {
+    // Register the StaticFileHandler with the registry
+    ASSERT_TRUE(HandlerRegistry::RegisterHandler("StaticHandler", StaticFileHandler::Create));
+    
     // Create a temporary directory for test files
     temp_dir_ = fs::temp_directory_path() / "static_file_handler_test";
     fs::create_directories(temp_dir_);
@@ -50,12 +61,12 @@ protected:
     png_file.write(reinterpret_cast<const char*>(png_data), sizeof(png_data));
     png_file.close();
     
-    // Initialize the handler with the temp directory and api path
-    handler_ = std::make_unique<StaticFileHandler>(temp_dir_.string(), "/static");
+    // Initialize the handler with the temp directory and serving path
+    handler_ = std::make_unique<StaticFileHandler>("/static", temp_dir_.string());
     
     // Create an alternate handler for testing root directory with trailing slash
     std::string root_with_slash = temp_dir_.string() + "/";
-    handler_with_slash_ = std::make_unique<StaticFileHandler>(root_with_slash, "/static");
+    handler_with_slash_ = std::make_unique<StaticFileHandler>("/static", root_with_slash);
   }
   
   void TearDown() override {
@@ -76,25 +87,24 @@ TEST_F(StaticFileHandlerTest, ServeHtmlFile) {
       "\r\n";
   
   Request request(raw_request);
-  Response response;
   
   // Call the handler
-  bool result = handler_->HandleRequest(request, &response);
+  std::unique_ptr<Response> response = handler_->handle_request(request);
   
-  // Check the result
-  EXPECT_TRUE(result);
+  // Check that we got a response
+  ASSERT_NE(response, nullptr);
   
   // Check the response status
-  EXPECT_EQ(response.status(), Response::OK);
+  EXPECT_EQ(response->status(), Response::OK);
   
   // Check the content type
-  const auto& headers = response.headers();
+  const auto& headers = response->headers();
   auto content_type_it = headers.find("Content-Type");
   EXPECT_NE(content_type_it, headers.end());
   EXPECT_EQ(content_type_it->second, "text/html");
   
   // Check the body content
-  EXPECT_EQ(response.body(), "<html><body><h1>Test Page</h1></body></html>");
+  EXPECT_EQ(response->body(), "<html><body><h1>Test Page</h1></body></html>");
 }
 
 TEST_F(StaticFileHandlerTest, ServeTxtFile) {
@@ -105,25 +115,24 @@ TEST_F(StaticFileHandlerTest, ServeTxtFile) {
       "\r\n";
   
   Request request(raw_request);
-  Response response;
   
   // Call the handler
-  bool result = handler_->HandleRequest(request, &response);
+  std::unique_ptr<Response> response = handler_->handle_request(request);
   
-  // Check the result
-  EXPECT_TRUE(result);
+  // Check that we got a response
+  ASSERT_NE(response, nullptr);
   
   // Check the response status
-  EXPECT_EQ(response.status(), Response::OK);
+  EXPECT_EQ(response->status(), Response::OK);
   
   // Check the content type
-  const auto& headers = response.headers();
+  const auto& headers = response->headers();
   auto content_type_it = headers.find("Content-Type");
   EXPECT_NE(content_type_it, headers.end());
   EXPECT_EQ(content_type_it->second, "text/plain");
   
   // Check the body content
-  EXPECT_EQ(response.body(), "This is a test file.");
+  EXPECT_EQ(response->body(), "This is a test file.");
 }
 
 TEST_F(StaticFileHandlerTest, ServeImageFile) {
@@ -134,19 +143,18 @@ TEST_F(StaticFileHandlerTest, ServeImageFile) {
       "\r\n";
   
   Request request(raw_request);
-  Response response;
   
   // Call the handler
-  bool result = handler_->HandleRequest(request, &response);
+  std::unique_ptr<Response> response = handler_->handle_request(request);
   
   // Check the result
-  EXPECT_TRUE(result);
+  ASSERT_NE(response, nullptr);
   
   // Check the response status
-  EXPECT_EQ(response.status(), Response::OK);
+  EXPECT_EQ(response->status(), Response::OK);
   
   // Check the content type
-  const auto& headers = response.headers();
+  const auto& headers = response->headers();
   auto content_type_it = headers.find("Content-Type");
   EXPECT_NE(content_type_it, headers.end());
   EXPECT_EQ(content_type_it->second, "image/jpeg");
@@ -160,19 +168,18 @@ TEST_F(StaticFileHandlerTest, ServePngFile) {
       "\r\n";
   
   Request request(raw_request);
-  Response response;
   
   // Call the handler
-  bool result = handler_->HandleRequest(request, &response);
+  std::unique_ptr<Response> response = handler_->handle_request(request);
   
   // Check the result
-  EXPECT_TRUE(result);
+  ASSERT_NE(response, nullptr);
   
   // Check the response status
-  EXPECT_EQ(response.status(), Response::OK);
+  EXPECT_EQ(response->status(), Response::OK);
   
   // Check the content type
-  const auto& headers = response.headers();
+  const auto& headers = response->headers();
   auto content_type_it = headers.find("Content-Type");
   EXPECT_NE(content_type_it, headers.end());
   EXPECT_EQ(content_type_it->second, "image/png");
@@ -186,25 +193,24 @@ TEST_F(StaticFileHandlerTest, ServeFileInSubdirectory) {
       "\r\n";
   
   Request request(raw_request);
-  Response response;
   
   // Call the handler
-  bool result = handler_->HandleRequest(request, &response);
+  std::unique_ptr<Response> response = handler_->handle_request(request);
   
   // Check the result
-  EXPECT_TRUE(result);
+  ASSERT_NE(response, nullptr);
   
   // Check the response status
-  EXPECT_EQ(response.status(), Response::OK);
+  EXPECT_EQ(response->status(), Response::OK);
   
   // Check the content type
-  const auto& headers = response.headers();
+  const auto& headers = response->headers();
   auto content_type_it = headers.find("Content-Type");
   EXPECT_NE(content_type_it, headers.end());
   EXPECT_EQ(content_type_it->second, "text/plain");
   
   // Check the body content
-  EXPECT_EQ(response.body(), "File in subdirectory");
+  EXPECT_EQ(response->body(), "File in subdirectory");
 }
 
 TEST_F(StaticFileHandlerTest, ServeIndexForDirectory) {
@@ -215,25 +221,24 @@ TEST_F(StaticFileHandlerTest, ServeIndexForDirectory) {
       "\r\n";
   
   Request request(raw_request);
-  Response response;
   
   // Call the handler
-  bool result = handler_->HandleRequest(request, &response);
+  std::unique_ptr<Response> response = handler_->handle_request(request);
   
   // Check the result
-  EXPECT_TRUE(result);
+  ASSERT_NE(response, nullptr);
   
   // Check the response status
-  EXPECT_EQ(response.status(), Response::OK);
+  EXPECT_EQ(response->status(), Response::OK);
   
   // Check the content type
-  const auto& headers = response.headers();
+  const auto& headers = response->headers();
   auto content_type_it = headers.find("Content-Type");
   EXPECT_NE(content_type_it, headers.end());
   EXPECT_EQ(content_type_it->second, "text/html");
   
   // Should serve index.html by default
-  EXPECT_EQ(response.body(), "<html><body><h1>Test Page</h1></body></html>");
+  EXPECT_EQ(response->body(), "<html><body><h1>Test Page</h1></body></html>");
 }
 
 TEST_F(StaticFileHandlerTest, ServeDirectoryWithTrailingSlash) {
@@ -244,16 +249,15 @@ TEST_F(StaticFileHandlerTest, ServeDirectoryWithTrailingSlash) {
       "\r\n";
   
   Request request(raw_request);
-  Response response;
   
   // This should fail since we don't have an index.html in the subdirectory
-  bool result = handler_->HandleRequest(request, &response);
+  std::unique_ptr<Response> response = handler_->handle_request(request);
   
   // Check that the request failed
-  EXPECT_FALSE(result);
+  ASSERT_NE(response, nullptr);
   
   // Check the response status
-  EXPECT_EQ(response.status(), Response::NOT_FOUND);
+  EXPECT_EQ(response->status(), Response::NOT_FOUND);
 }
 
 TEST_F(StaticFileHandlerTest, UnknownExtensionDefaultsToOctetStream) {
@@ -270,19 +274,18 @@ TEST_F(StaticFileHandlerTest, UnknownExtensionDefaultsToOctetStream) {
       "\r\n";
   
   Request request(raw_request);
-  Response response;
   
   // Call the handler
-  bool result = handler_->HandleRequest(request, &response);
+  std::unique_ptr<Response> response = handler_->handle_request(request);
   
   // Check the result
-  EXPECT_TRUE(result);
+  ASSERT_NE(response, nullptr);
   
   // Check the response status
-  EXPECT_EQ(response.status(), Response::OK);
+  EXPECT_EQ(response->status(), Response::OK);
   
   // Check the content type
-  const auto& headers = response.headers();
+  const auto& headers = response->headers();
   auto content_type_it = headers.find("Content-Type");
   EXPECT_NE(content_type_it, headers.end());
   EXPECT_EQ(content_type_it->second, "application/octet-stream");
@@ -296,25 +299,24 @@ TEST_F(StaticFileHandlerTest, FileNotFound) {
       "\r\n";
   
   Request request(raw_request);
-  Response response;
   
   // Call the handler
-  bool result = handler_->HandleRequest(request, &response);
+  std::unique_ptr<Response> response = handler_->handle_request(request);
   
-  // Check the result (should be false for failure)
-  EXPECT_FALSE(result);
+  // Check that we got a response
+  ASSERT_NE(response, nullptr);
   
   // Check the response status (should be 404 Not Found)
-  EXPECT_EQ(response.status(), Response::NOT_FOUND);
+  EXPECT_EQ(response->status(), Response::NOT_FOUND);
   
   // Check the content type (should be text/html for the error page)
-  const auto& headers = response.headers();
+  const auto& headers = response->headers();
   auto content_type_it = headers.find("Content-Type");
   EXPECT_NE(content_type_it, headers.end());
   EXPECT_EQ(content_type_it->second, "text/html");
   
   // Check that the body contains a 404 message
-  EXPECT_NE(response.body().find("404 Not Found"), std::string::npos);
+  EXPECT_NE(response->body().find("404 Not Found"), std::string::npos);
 }
 
 TEST_F(StaticFileHandlerTest, InvalidMethod) {
@@ -325,16 +327,15 @@ TEST_F(StaticFileHandlerTest, InvalidMethod) {
       "\r\n";
   
   Request request(raw_request);
-  Response response;
   
   // Call the handler
-  bool result = handler_->HandleRequest(request, &response);
+  std::unique_ptr<Response> response = handler_->handle_request(request);
   
-  // Check the result (should be false for failure)
-  EXPECT_FALSE(result);
+  // Check that we got a response
+  ASSERT_NE(response, nullptr);
   
-  // Check the response status (should be 404 Not Found)
-  EXPECT_EQ(response.status(), Response::NOT_FOUND);
+  // Check the response status (should be 404 Not Found or 405 Method Not Allowed)
+  EXPECT_EQ(response->status(), Response::NOT_FOUND);
 }
 
 TEST_F(StaticFileHandlerTest, RootDirectoryWithTrailingSlash) {
@@ -345,25 +346,24 @@ TEST_F(StaticFileHandlerTest, RootDirectoryWithTrailingSlash) {
       "\r\n";
   
   Request request(raw_request);
-  Response response;
   
   // Call the handler with trailing slash
-  bool result = handler_with_slash_->HandleRequest(request, &response);
+  std::unique_ptr<Response> response = handler_with_slash_->handle_request(request);
   
   // Check the result
-  EXPECT_TRUE(result);
+  ASSERT_NE(response, nullptr);
   
   // Check the response status
-  EXPECT_EQ(response.status(), Response::OK);
+  EXPECT_EQ(response->status(), Response::OK);
   
   // Check the body content
-  EXPECT_EQ(response.body(), "<html><body><h1>Test Page</h1></body></html>");
+  EXPECT_EQ(response->body(), "<html><body><h1>Test Page</h1></body></html>");
 }
 
 // Direct tests for the StaticFileHandler methods
 TEST_F(StaticFileHandlerTest, TestMimeTypeUtility) {
   // Create handler to test with
-  StaticFileHandler handler(temp_dir_.string(), "/static");
+  StaticFileHandler handler("/static", temp_dir_.string());
   
   // Test various file extensions
   EXPECT_EQ(MimeTypes::GetMimeType("html"), "text/html");
@@ -382,4 +382,146 @@ TEST_F(StaticFileHandlerTest, TestMimeTypeUtility) {
   // Test case insensitivity
   EXPECT_EQ(MimeTypes::GetMimeType("HTML"), "text/html");
   EXPECT_EQ(MimeTypes::GetMimeType("Jpg"), "image/jpeg");
+}
+
+TEST_F(StaticFileHandlerTest, TestFactoryMethod) {
+  // Test the Create factory method with valid arguments
+  std::vector<std::string> valid_args = {"/static", temp_dir_.string()};
+  std::unique_ptr<RequestHandler> handler = StaticFileHandler::Create(valid_args);
+  ASSERT_NE(handler, nullptr);
+  
+  // Test with missing arguments (should throw)
+  std::vector<std::string> missing_args = {"/static"};
+  EXPECT_THROW(StaticFileHandler::Create(missing_args), std::invalid_argument);
+  
+  // Test with invalid path (no leading slash)
+  std::vector<std::string> invalid_args = {"static", temp_dir_.string()};
+  EXPECT_THROW(StaticFileHandler::Create(invalid_args), std::invalid_argument);
+}
+
+/**
+ * @brief Test StaticFileHandler factory method with valid arguments
+ */
+TEST_F(StaticFileHandlerTest, TestFactoryMethodValidArgs) {
+  // Create a handler using the factory method
+  std::vector<std::string> args = {"/static", temp_dir_.string()};
+  auto handler = StaticFileHandler::Create(args);
+  
+  // Verify it was created successfully
+  ASSERT_NE(handler, nullptr);
+  
+  // Test it with a request
+  std::string raw_request = "GET /static/test.txt HTTP/1.1\r\nHost: localhost\r\n\r\n";
+  Request request(raw_request);
+  auto response = handler->handle_request(request);
+  
+  // Verify correct response
+  ASSERT_NE(response, nullptr);
+  EXPECT_EQ(response->status(), Response::OK);
+  EXPECT_EQ(response->body(), "This is a test file.");
+}
+
+/**
+ * @brief Test StaticFileHandler factory method with invalid arguments
+ */
+TEST_F(StaticFileHandlerTest, TestFactoryMethodInvalidArgs) {
+  // Test with too few arguments
+  std::vector<std::string> too_few_args = {"/static"};
+  EXPECT_THROW(StaticFileHandler::Create(too_few_args), std::invalid_argument);
+  
+  // Test with too many arguments
+  std::vector<std::string> too_many_args = {"/static", temp_dir_.string(), "extra_arg"};
+  EXPECT_THROW(StaticFileHandler::Create(too_many_args), std::invalid_argument);
+  
+  // Test with empty location
+  std::vector<std::string> empty_location = {"", temp_dir_.string()};
+  EXPECT_THROW(StaticFileHandler::Create(empty_location), std::invalid_argument);
+  
+  // Test with empty root
+  std::vector<std::string> empty_root = {"/static", ""};
+  EXPECT_THROW(StaticFileHandler::Create(empty_root), std::invalid_argument);
+}
+
+/**
+ * @brief Test StaticFileHandler creation through the registry
+ */
+TEST_F(StaticFileHandlerTest, TestHandlerRegistryCreation) {
+  // Create a handler using the registry
+  std::vector<std::string> args = {"/static", temp_dir_.string()};
+  auto handler = HandlerRegistry::CreateHandler("StaticHandler", args);
+  
+  // Verify handler was created successfully
+  ASSERT_NE(handler, nullptr);
+  
+  // Verify it's a StaticFileHandler by checking its behavior
+  std::string raw_request = "GET /static/test.txt HTTP/1.1\r\nHost: localhost\r\n\r\n";
+  Request request(raw_request);
+  auto response = handler->handle_request(request);
+  
+  ASSERT_NE(response, nullptr);
+  EXPECT_EQ(response->status(), Response::OK);
+  EXPECT_EQ(response->body(), "This is a test file.");
+}
+
+/**
+ * @brief Test StaticFileHandler URL mapping with non-existent files
+ */
+TEST_F(StaticFileHandlerTest, TestNonExistentFile) {
+  // Request a file that doesn't exist
+  std::string raw_request = "GET /static/nonexistent.txt HTTP/1.1\r\nHost: localhost\r\n\r\n";
+  Request request(raw_request);
+  
+  // Should return 404
+  std::unique_ptr<Response> response = handler_->handle_request(request);
+  ASSERT_NE(response, nullptr);
+  EXPECT_EQ(response->status(), Response::NOT_FOUND);
+}
+
+/**
+ * @brief Test path traversal attack protection
+ */
+TEST_F(StaticFileHandlerTest, TestDirectoryTraversal) {
+  // Request a file trying to traverse outside the root directory
+  std::string raw_request = "GET /static/../../../etc/passwd HTTP/1.1\r\nHost: localhost\r\n\r\n";
+  Request request(raw_request);
+  
+  // Should return 403 Forbidden
+  std::unique_ptr<Response> response = handler_->handle_request(request);
+  ASSERT_NE(response, nullptr);
+  EXPECT_EQ(response->status(), Response::FORBIDDEN);
+}
+
+/**
+ * @brief Test per-request handler instantiation with unique configurations
+ */
+TEST_F(StaticFileHandlerTest, TestMultipleHandlerInstances) {
+  // Create two handlers with different base paths and root directories
+  std::vector<std::string> args1 = {"/static1", temp_dir_.string() + "/subdir"};
+  auto handler1 = HandlerRegistry::CreateHandler("StaticHandler", args1);
+  
+  std::vector<std::string> args2 = {"/static2", temp_dir_.string()};
+  auto handler2 = HandlerRegistry::CreateHandler("StaticHandler", args2);
+  
+  // Both handlers should be created successfully
+  ASSERT_NE(handler1, nullptr);
+  ASSERT_NE(handler2, nullptr);
+  
+  // Request from first handler
+  std::string raw_request1 = "GET /static1/file.txt HTTP/1.1\r\nHost: localhost\r\n\r\n";
+  Request request1(raw_request1);
+  auto response1 = handler1->handle_request(request1);
+  
+  // Request from second handler
+  std::string raw_request2 = "GET /static2/test.txt HTTP/1.1\r\nHost: localhost\r\n\r\n";
+  Request request2(raw_request2);
+  auto response2 = handler2->handle_request(request2);
+  
+  // Verify both responses
+  ASSERT_NE(response1, nullptr);
+  EXPECT_EQ(response1->status(), Response::OK);
+  EXPECT_EQ(response1->body(), "File in subdirectory");
+  
+  ASSERT_NE(response2, nullptr);
+  EXPECT_EQ(response2->status(), Response::OK);
+  EXPECT_EQ(response2->body(), "This is a test file.");
 } 

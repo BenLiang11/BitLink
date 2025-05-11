@@ -15,7 +15,7 @@ class HandlerServerTest : public ::testing::Test {
 protected:
   boost::asio::io_service io_service;
   short port = 8080;
-  std::map<std::string, std::shared_ptr<RequestHandler>> empty_handlers;
+  std::map<std::string, HandlerRegistration> empty_handlers;
   HandlerDispatcher handler_dispatcher{empty_handlers};
 };
 

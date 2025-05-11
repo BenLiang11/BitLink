@@ -1,88 +1,115 @@
 #include "handlers/static_file_handler.h"
+#include "handler_registry.h"
 #include "mime_types.h"
 #include "request.h"
 #include <fstream>
 #include <sstream>
 #include <filesystem>
 #include <iostream>
+#include <stdexcept>
 
 namespace fs = std::filesystem;
 
-StaticFileHandler::StaticFileHandler(const std::string& root_dir, const std::string& api_path)
-    : root_dir_(root_dir), api_path_(api_path) {
-    // Ensure root_dir_ ends with a slash
-    if (!root_dir_.empty() && root_dir_.back() != '/') {
-        root_dir_ += '/';
+StaticFileHandler::StaticFileHandler(const std::string& serving_path, const std::string& root_directory)
+    : serving_path_(serving_path), root_directory_(root_directory) {
+    if (serving_path_.empty() || serving_path_[0] != '/') {
+        throw std::invalid_argument("StaticFileHandler serving_path must start with '/'. Path: " + serving_path_);
+    }
+    if (serving_path_.length() > 1 && serving_path_.back() == '/') {
+        serving_path_.pop_back();
     }
 }
 
-bool StaticFileHandler::HandleRequest(const Request& request, Response* response) {
-    // We only handle GET requests
-    if (request.method() != "GET") {
+std::unique_ptr<Response> StaticFileHandler::handle_request(const Request& req) {
+    auto response = std::make_unique<Response>();
+
+    if (req.method() != "GET") {
         response->set_status(Response::NOT_FOUND);
         response->set_header("Content-Type", "text/html");
-        response->set_body("<html><body><h1>404 Not Found</h1><p>Method not supported.</p></body></html>");
-        return false;
+        response->set_body("<html><body><h1>405 Method Not Allowed</h1></body></html>");
+        return response;
+    }
+
+    std::string request_uri = req.uri();
+
+    if (request_uri.rfind(serving_path_, 0) != 0) {
+        response->set_status(Response::INTERNAL_SERVER_ERROR);
+        response->set_header("Content-Type", "text/html");
+        response->set_body("<html><body><h1>500 Internal Server Error</h1><p>URI mismatch.</p></body></html>");
+        return response;
+    }
+
+    std::string relative_path;
+    if (request_uri.length() == serving_path_.length() || (serving_path_ == "/" && request_uri.length() == 1)) {
+        relative_path = "index.html";
+    } else if (serving_path_ == "/") {
+        relative_path = request_uri.substr(1);
+    } else {
+        relative_path = request_uri.substr(serving_path_.length() + 1);
     }
     
-    // Map the URI to a file path
-    std::string file_path = MapUriToFilePath(request.get_file_path(api_path_));
-    std::cout << "Serving File Path: " << file_path << std::endl;
+    if (relative_path.empty() || relative_path.back() == '/') {
+        relative_path += "index.html";
+    }
 
-    // Read the file into memory
-    std::string content;
-    if (!ReadFile(file_path, &content)) {
+    fs::path fs_root_path = root_directory_;
+    fs::path fs_relative_path = relative_path;
+    fs::path full_file_path = fs_root_path / fs_relative_path;
+
+    std::string canonical_root = fs::weakly_canonical(fs_root_path).string();
+    std::string canonical_file = fs::weakly_canonical(full_file_path).string();
+
+    if (canonical_file.rfind(canonical_root, 0) != 0) {
+        response->set_status(Response::FORBIDDEN);
+        response->set_header("Content-Type", "text/html");
+        response->set_body("<html><body><h1>403 Forbidden</h1><p>Requested resource is outside the allowed directory.</p></body></html>");
+        return response;
+    }
+    
+    std::ifstream file(full_file_path.string(), std::ios::binary);
+    if (!file) {
         response->set_status(Response::NOT_FOUND);
         response->set_header("Content-Type", "text/html");
         response->set_body("<html><body><h1>404 Not Found</h1><p>The requested file could not be found.</p></body></html>");
-        return false;
+        return response;
     }
-    
-    // Set the response
+
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    std::string content = buffer.str();
+
     response->set_status(Response::OK);
-    response->set_header("Content-Type", GetMimeType(file_path));
+    response->set_header("Content-Type", get_mime_type(full_file_path.string()));
     response->set_body(content);
-    response->set_header("Connection", "close");
-    
-    return true;
+
+    return response;
 }
 
-std::string StaticFileHandler::GetMimeType(const std::string& path) const {
-    // Get file extension
-    size_t dot_pos = path.find_last_of('.');
+std::string StaticFileHandler::get_mime_type(const std::string& file_path) const {
+    size_t dot_pos = file_path.find_last_of('.');
     if (dot_pos != std::string::npos) {
-        std::string extension = path.substr(dot_pos + 1);
+        std::string extension = file_path.substr(dot_pos + 1);
         return MimeTypes::GetMimeType(extension);
     }
-    
-    // If no extension, default to binary
     return "application/octet-stream";
 }
 
-std::string StaticFileHandler::MapUriToFilePath(const std::string& uri) const {
-    // Skip the leading slash if it exists
-    size_t start_pos = (uri.front() == '/') ? 1 : 0;
-    
-    // Handle default index file
-    std::string path = uri.substr(start_pos);
-    if (path.empty() || path.back() == '/') {
-        path += "index.html";
+std::unique_ptr<RequestHandler> StaticFileHandler::Create(const std::vector<std::string>& args) {
+    if (args.size() != 2) {
+        throw std::invalid_argument("StaticFileHandler factory requires 2 arguments: serving_path and root_directory. Got " + std::to_string(args.size()));
     }
     
-    // Combine with root directory
-    return root_dir_ + path;
+    // Check for empty arguments
+    if (args[0].empty()) {
+        throw std::invalid_argument("StaticFileHandler serving_path cannot be empty");
+    }
+    if (args[1].empty()) {
+        throw std::invalid_argument("StaticFileHandler root_directory cannot be empty");
+    }
+    
+    return std::make_unique<StaticFileHandler>(args[0], args[1]);
 }
 
-bool StaticFileHandler::ReadFile(const std::string& path, std::string* content) const {
-    std::ifstream file(path, std::ios::binary);
-    if (!file) {
-        return false;
-    }
-    
-    // Use a stringstream to read the entire file
-    std::stringstream buffer;
-    buffer << file.rdbuf();
-    *content = buffer.str();
-    
-    return true;
+namespace {
+    const bool static_file_handler_registered = HandlerRegistry::RegisterHandler("StaticHandler", StaticFileHandler::Create);
 } 

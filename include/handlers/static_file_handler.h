@@ -3,42 +3,57 @@
 
 #include "handlers/base_handler.h"
 #include <string>
+#include <vector>
+#include <memory>
 
 /**
- * @brief Handler that serves static files from disk.
- * 
- * This handler maps the request URI to a file path in a specified root
- * directory, reads the file (if it exists), and sends it in the response.
- * If the file doesn't exist, it returns a 404 Not Found response.
+ * @brief Handler that serves static files from a specified root directory.
+ *
+ * This handler maps the request URI (relative to its configured serving path)
+ * to a file path in a specified root directory on the filesystem.
+ * It reads the file (if it exists and is accessible) and sends it in the response.
+ * If the file doesn't exist or an error occurs, it returns an appropriate error response (e.g., 404 Not Found).
  */
 class StaticFileHandler : public RequestHandler {
 public:
     /**
-     * @brief Construct a new StaticFileHandler with a root directory.
-     * 
-     * @param root_dir The root directory from which to serve files.
+     * @brief Construct a new StaticFileHandler.
+     *
+     * @param serving_path The URL prefix this handler is registered for (e.g., "/static").
+     * @param root_directory The root directory on the filesystem from which to serve files (e.g., "./files").
+     *                       This path is relative to the webserver binary location as per Common API.
      */
-    explicit StaticFileHandler(const std::string& root_dir, const std::string& api_path);
+    StaticFileHandler(const std::string& serving_path, const std::string& root_directory);
 
     /**
      * @brief Handle an HTTP request by serving a static file.
-     * 
-     * @param request The HTTP request to handle.
-     * @param response The HTTP response to populate.
-     * @return bool true if handled successfully, false otherwise.
+     *
+     * @param req The HTTP request object.
+     * @return A unique_ptr to the response object.
      */
-    bool HandleRequest(const Request& request, Response* response) override;
+    std::unique_ptr<Response> handle_request(const Request& req) override;
+
+    /**
+     * @brief Static factory function for creating StaticFileHandler instances.
+     *        Registered with HandlerRegistry.
+     *
+     * @param args A vector of string arguments. Expected: {serving_path, root_directory}.
+     * @return A unique_ptr to a new StaticFileHandler instance.
+     * @throws std::invalid_argument if the number of arguments is incorrect.
+     */
+    static std::unique_ptr<RequestHandler> Create(const std::vector<std::string>& args);
 
 private:
-    std::string root_dir_;
-    std::string api_path_;
+    std::string serving_path_;
+    std::string root_directory_;
+
     /**
      * @brief Get the MIME type for a file based on its extension.
-     * 
-     * @param path The file path.
-     * @return std::string The MIME type.
+     *
+     * @param file_path The full path to the file.
+     * @return std::string The MIME type (e.g., "text/html", "image/jpeg"). Defaults to "application/octet-stream".
      */
-    std::string GetMimeType(const std::string& path) const;
+    std::string get_mime_type(const std::string& file_path) const;
 
     /**
      * @brief Map a URI to a local file path.

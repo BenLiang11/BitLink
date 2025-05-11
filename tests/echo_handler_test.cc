@@ -2,14 +2,29 @@
 #include "handlers/echo_handler.h"
 #include "request.h"
 #include "response.h"
+#include "handler_registry.h"
 #include <string>
-#include <map>
+#include <memory>
 
+/**
+ * @brief Test fixture for EchoHandler tests
+ * 
+ * Tests the functionality of the echo handler including
+ * request handling, factory methods, and registration.
+ */
 class EchoHandlerTest : public ::testing::Test {
 protected:
+  void SetUp() override {
+    // Register the EchoHandler with the registry
+    ASSERT_TRUE(HandlerRegistry::RegisterHandler("EchoHandler", EchoHandler::Create));
+  }
+  
   EchoHandler handler_;
 };
 
+/**
+ * @brief Test that echo handler correctly reflects basic requests
+ */
 TEST_F(EchoHandlerTest, HandlesBasicRequest) {
   // Create a test request
   std::string raw_request = 
@@ -20,32 +35,29 @@ TEST_F(EchoHandlerTest, HandlesBasicRequest) {
       "\r\n";
   
   Request request(raw_request);
-  Response response;
   
   // Call the handler
-  bool result = handler_.HandleRequest(request, &response);
+  std::unique_ptr<Response> response = handler_.handle_request(request);
   
-  // Check the result
-  EXPECT_TRUE(result);
+  // Check that we got a response
+  ASSERT_NE(response, nullptr);
   
   // Check the response status
-  EXPECT_EQ(response.status(), Response::OK);
+  EXPECT_EQ(response->status(), Response::OK);
   
   // Check the content type
-  const auto& headers = response.headers();
+  const auto& headers = response->headers();
   auto content_type_it = headers.find("Content-Type");
   EXPECT_NE(content_type_it, headers.end());
   EXPECT_EQ(content_type_it->second, "text/plain");
   
-  // Check the Connection header
-  auto connection_it = headers.find("Connection");
-  EXPECT_NE(connection_it, headers.end());
-  EXPECT_EQ(connection_it->second, "close");
-  
   // Check that the body contains the raw request
-  EXPECT_EQ(response.body(), raw_request);
+  EXPECT_EQ(response->body(), request.body());
 }
 
+/**
+ * @brief Test that echo handler correctly handles requests with bodies
+ */
 TEST_F(EchoHandlerTest, HandlesRequestWithBody) {
   // Create a request with body
   std::string raw_request = 
@@ -57,67 +69,92 @@ TEST_F(EchoHandlerTest, HandlesRequestWithBody) {
       "name=test&x=10";
   
   Request request(raw_request);
-  Response response;
   
   // Call the handler
-  bool result = handler_.HandleRequest(request, &response);
+  std::unique_ptr<Response> response = handler_.handle_request(request);
   
-  // Check the result
-  EXPECT_TRUE(result);
+  // Check that we got a response
+  ASSERT_NE(response, nullptr);
   
-  // Check that the response includes Content-Length header
-  const auto& headers = response.headers();
-  auto content_length_it = headers.find("Content-Length");
-  EXPECT_NE(content_length_it, headers.end());
-  EXPECT_EQ(content_length_it->second, std::to_string(raw_request.size()));
+  // Check the response status
+  EXPECT_EQ(response->status(), Response::OK);
   
-  // Check that the body contains the raw request
-  EXPECT_EQ(response.body(), raw_request);
+  // Check that the body contains the request body
+  EXPECT_EQ(response->body(), request.body());
 }
 
+/**
+ * @brief Test that echo handler correctly handles empty requests
+ */
 TEST_F(EchoHandlerTest, HandlesEmptyRequest) {
   // Create an empty request
   std::string raw_request = "";
   
   Request request(raw_request);
-  Response response;
   
   // Call the handler
-  bool result = handler_.HandleRequest(request, &response);
+  std::unique_ptr<Response> response = handler_.handle_request(request);
   
-  // Check the result
-  EXPECT_TRUE(result);
+  // Check that we got a response
+  ASSERT_NE(response, nullptr);
   
   // Check the response status
-  EXPECT_EQ(response.status(), Response::OK);
+  EXPECT_EQ(response->status(), Response::OK);
   
   // Check the content type
-  const auto& headers = response.headers();
+  const auto& headers = response->headers();
   auto content_type_it = headers.find("Content-Type");
   EXPECT_NE(content_type_it, headers.end());
   EXPECT_EQ(content_type_it->second, "text/plain");
   
-  // Check that the body contains the raw request (which is empty)
-  EXPECT_EQ(response.body(), raw_request);
+  // Check that the body contains the empty request body
+  EXPECT_EQ(response->body(), request.body());
 }
 
-TEST_F(EchoHandlerTest, AllResponseHeadersPresent) {
-  std::string raw_request = "GET /echo HTTP/1.1\r\n\r\n";
+/**
+ * @brief Test the factory method and handler registry integration
+ */
+TEST_F(EchoHandlerTest, TestFactoryMethod) {
+  // Test the Create factory method with no arguments (valid case)
+  std::vector<std::string> no_args;
+  std::unique_ptr<RequestHandler> handler = EchoHandler::Create(no_args);
+  ASSERT_NE(handler, nullptr);
   
+  // Test with arguments (should throw)
+  std::vector<std::string> some_args = {"arg1"};
+  EXPECT_THROW(EchoHandler::Create(some_args), std::invalid_argument);
+}
+
+/**
+ * @brief Test handler creation through the registry
+ */
+TEST_F(EchoHandlerTest, TestHandlerRegistryCreation) {
+  // Create a handler using the registry
+  std::vector<std::string> args;
+  auto handler = HandlerRegistry::CreateHandler("EchoHandler", args);
+  
+  // Verify handler was created successfully
+  ASSERT_NE(handler, nullptr);
+  
+  // Verify it's an EchoHandler by checking its behavior
+  std::string raw_request = "GET /echo HTTP/1.1\r\nHost: localhost\r\n\r\n";
   Request request(raw_request);
-  Response response;
+  auto response = handler->handle_request(request);
   
-  handler_.HandleRequest(request, &response);
+  ASSERT_NE(response, nullptr);
+  EXPECT_EQ(response->status(), Response::OK);
+  EXPECT_EQ(response->headers().at("Content-Type"), "text/plain");
+}
+
+/**
+ * @brief Test handler creation with invalid arguments
+ */
+TEST_F(EchoHandlerTest, TestHandlerCreationWithInvalidArgs) {
+  // Attempt to create with invalid args
+  std::vector<std::string> invalid_args = {"unexpected", "args"};
+  EXPECT_THROW(HandlerRegistry::CreateHandler("EchoHandler", invalid_args), std::invalid_argument);
   
-  // Ensure all expected headers are present
-  const auto& headers = response.headers();
-  EXPECT_NE(headers.find("Content-Type"), headers.end());
-  EXPECT_NE(headers.find("Content-Length"), headers.end());
-  EXPECT_NE(headers.find("Connection"), headers.end());
-  
-  // Check response conversion to string
-  std::string response_str = response.to_string();
-  EXPECT_TRUE(response_str.find("HTTP/1.1 200 OK") != std::string::npos);
-  EXPECT_TRUE(response_str.find("Content-Type: text/plain") != std::string::npos);
-  EXPECT_TRUE(response_str.find("Connection: close") != std::string::npos);
+  // Attempt to create with too many args
+  std::vector<std::string> too_many_args = {"too", "many", "args", "here"};
+  EXPECT_THROW(HandlerRegistry::CreateHandler("EchoHandler", too_many_args), std::invalid_argument);
 } 

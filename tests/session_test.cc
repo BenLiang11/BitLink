@@ -10,7 +10,7 @@ class SessionCoverageTest : public ::testing::Test {
  protected:
   boost::asio::io_context io_context;
   // Create an empty handler dispatcher for testing
-  std::map<std::string, std::shared_ptr<RequestHandler>> empty_handlers;
+  std::map<std::string, HandlerRegistration> empty_handlers;
   HandlerDispatcher handler_dispatcher{empty_handlers};
 };
 
