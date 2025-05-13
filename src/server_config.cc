@@ -2,6 +2,7 @@
 #include "handlers/base_handler.h"
 #include "handlers/echo_handler.h"
 #include "handlers/static_file_handler.h"
+#include "handlers/not_found_handler.h"
 #include <iostream>
 #include <sstream>
 #include "common_exceptions.h"
@@ -34,7 +35,7 @@ bool ServerConfig::ParseConfig(const NginxConfig& config) {
     }
     
     // Add default echo handler if no locations are specified
-    AddDefaultLocationIfNeeded();
+    AddDefaultNotFoundHandler();
 
     // Validate the completed configuration
     return ValidateConfiguration();
@@ -53,18 +54,23 @@ std::map<std::string, HandlerRegistration> ServerConfig::CreateHandlerRegistrati
             HandlerRegistration reg;
             reg.location = location_path;
             
-            if (location.handler_type == "echo") {
+            if (location.handler_type == ECHO_HANDLER_NAME) {
                 reg.handler_name = "EchoHandler";
                 reg.args = {}; // EchoHandler takes no args
                 std::cout << "Added EchoHandler registration for path: " << location_path << std::endl;
             } 
-            else if (location.handler_type == "static") {
+            else if (location.handler_type == STATIC_FILE_HANDLER_NAME) {
                 reg.handler_name = "StaticHandler";
                 
                 // Convert typed arguments to string vector
                 reg.args = TypedArgsToStringVector(location_path, location.args);
                 
                 std::cout << "Added StaticHandler registration for path: " << location_path << std::endl;
+            }
+            else if (location.handler_type == NOT_FOUND_HANDLER_NAME) {
+                reg.handler_name = "NotFoundHandler";
+                reg.args = {}; // NotFoundHandler takes no args
+                std::cout << "Added NotFoundHandler registration for path: " << location_path << std::endl;
             }
             else {
                 std::cerr << "Warning: Unknown handler type '" << location.handler_type 
@@ -137,6 +143,7 @@ bool ServerConfig::ParseLocationDirective(const std::shared_ptr<NginxConfigState
     LocationConfig location;
     location.path = statement->tokens_[1];
     location.handler_type = statement->tokens_[2];
+
     
     // Check for trailing slash (except for root "/")
     if (location.path.length() > 1 && location.path.back() == '/') {
@@ -155,7 +162,7 @@ bool ServerConfig::ParseLocationDirective(const std::shared_ptr<NginxConfigState
     }
     
     // Validate handler-specific requirements
-    if (location.handler_type == "static") {
+    if (location.handler_type == STATIC_FILE_HANDLER_NAME) {
         // Static handlers must specify a root directory
         if (location.args.find("root") == location.args.end()) {
             std::cerr << "Static handler for path " << location.path 
@@ -182,7 +189,14 @@ bool ServerConfig::ParseTypedArguments(const NginxConfig* child_block, std::map<
         
         const std::string& arg_name = statement->tokens_[0];
         const std::string& arg_value_str = statement->tokens_[1];
-        
+        // Reject quoted strings
+        if ((arg_value_str.size() >= 2) &&
+            ((arg_value_str.front() == '"' && arg_value_str.back() == '"') ||
+             (arg_value_str.front() == '\'' && arg_value_str.back() == '\''))) {
+            std::string msg = "Quoted strings are not supported for argument '" + arg_name + "': " + arg_value_str;
+            std::cerr << "Error: " << msg << std::endl;
+            throw std::invalid_argument(msg);
+        }
         // Try to parse as different types
         if (arg_name == "root" || arg_name == "path" || arg_name == "file") {
             // These are always treated as strings
@@ -197,7 +211,6 @@ bool ServerConfig::ParseTypedArguments(const NginxConfig* child_block, std::map<
             } catch (const std::exception&) {
                 // Not an integer
             }
-            
             // Try to parse as boolean
             if (arg_value_str == "true" || arg_value_str == "yes" || arg_value_str == "1") {
                 args[arg_name] = true;
@@ -216,14 +229,11 @@ bool ServerConfig::ParseTypedArguments(const NginxConfig* child_block, std::map<
 }
 
 // Adds a default echo handler for root path if no locations are specified
-void ServerConfig::AddDefaultLocationIfNeeded() {
-    if (locations_.empty()) {
-        std::cout << "No locations specified, adding default echo handler for path '/'" << std::endl;
-        LocationConfig location;
-        location.path = "/";
-        location.handler_type = "echo";
-        locations_.push_back(location);
-    }
+void ServerConfig::AddDefaultNotFoundHandler() {
+    LocationConfig location;
+    location.path = "/";
+    location.handler_type = NOT_FOUND_HANDLER_NAME;
+    locations_.push_back(location);
 }
 
 // Validate configuration

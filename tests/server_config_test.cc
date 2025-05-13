@@ -39,13 +39,13 @@ TEST_F(ServerConfigTest, ParseValidConfig) {
   auto echo_statement = std::make_shared<NginxConfigStatement>();
   echo_statement->tokens_.push_back("location");
   echo_statement->tokens_.push_back("/echo");
-  echo_statement->tokens_.push_back("echo");
+  echo_statement->tokens_.push_back("EchoHandler");
   nginx_config_.statements_.push_back(echo_statement);
 
   auto static_statement = std::make_shared<NginxConfigStatement>();
   static_statement->tokens_.push_back("location");
   static_statement->tokens_.push_back("/static");
-  static_statement->tokens_.push_back("static");
+  static_statement->tokens_.push_back("StaticHandler");
   
   // Create child block for static handler
   auto static_child_block = std::make_unique<NginxConfig>();
@@ -59,7 +59,7 @@ TEST_F(ServerConfigTest, ParseValidConfig) {
 
   EXPECT_TRUE(config_.ParseConfig(nginx_config_));
   EXPECT_EQ(config_.port(), 8080);
-  EXPECT_EQ(config_.locations().size(), 2);
+  EXPECT_EQ(config_.locations().size(), 3);
 }
 
 TEST_F(ServerConfigTest, ParseInvalidPort) {
@@ -77,7 +77,7 @@ TEST_F(ServerConfigTest, ParseMissingPort) {
   auto echo_statement = std::make_shared<NginxConfigStatement>();
   echo_statement->tokens_.push_back("location");
   echo_statement->tokens_.push_back("/echo");
-  echo_statement->tokens_.push_back("echo");
+  echo_statement->tokens_.push_back("EchoHandler");
   nginx_config_.statements_.push_back(echo_statement);
   
   EXPECT_FALSE(config_.ParseConfig(nginx_config_));
@@ -93,7 +93,7 @@ TEST_F(ServerConfigTest, ParseInvalidStaticHandler) {
   auto static_statement = std::make_shared<NginxConfigStatement>();
   static_statement->tokens_.push_back("location");
   static_statement->tokens_.push_back("/static");
-  static_statement->tokens_.push_back("static");
+  static_statement->tokens_.push_back("StaticHandler");
   // Empty child block
   static_statement->child_block_ = std::make_unique<NginxConfig>();
   nginx_config_.statements_.push_back(static_statement);
@@ -111,13 +111,13 @@ TEST_F(ServerConfigTest, ParseDuplicateLocation) {
   auto echo_statement1 = std::make_shared<NginxConfigStatement>();
   echo_statement1->tokens_.push_back("location");
   echo_statement1->tokens_.push_back("/echo");
-  echo_statement1->tokens_.push_back("echo");
+  echo_statement1->tokens_.push_back("EchoHandler");
   nginx_config_.statements_.push_back(echo_statement1);
   
   auto echo_statement2 = std::make_shared<NginxConfigStatement>();
   echo_statement2->tokens_.push_back("location");
   echo_statement2->tokens_.push_back("/echo");
-  echo_statement2->tokens_.push_back("echo");
+  echo_statement2->tokens_.push_back("EchoHandler");
   nginx_config_.statements_.push_back(echo_statement2);
 
   EXPECT_THROW({
@@ -135,7 +135,7 @@ TEST_F(ServerConfigTest, ParseTrailingSlash) {
   auto echo_statement = std::make_shared<NginxConfigStatement>();
   echo_statement->tokens_.push_back("location");
   echo_statement->tokens_.push_back("/echo/");  // Trailing slash
-  echo_statement->tokens_.push_back("echo");
+  echo_statement->tokens_.push_back("EchoHandler");
   nginx_config_.statements_.push_back(echo_statement);
 
   EXPECT_THROW({
@@ -153,7 +153,7 @@ TEST_F(ServerConfigTest, ParseTypedArguments) {
   auto static_statement = std::make_shared<NginxConfigStatement>();
   static_statement->tokens_.push_back("location");
   static_statement->tokens_.push_back("/static");
-  static_statement->tokens_.push_back("static");
+  static_statement->tokens_.push_back("StaticHandler");
   
   // Create child block with various typed arguments
   auto static_child_block = std::make_unique<NginxConfig>();
@@ -186,7 +186,7 @@ TEST_F(ServerConfigTest, ParseTypedArguments) {
   nginx_config_.statements_.push_back(static_statement);
 
   EXPECT_TRUE(config_.ParseConfig(nginx_config_));
-  EXPECT_EQ(config_.locations().size(), 1);
+  EXPECT_EQ(config_.locations().size(), 2);
   
   const auto& location = config_.locations()[0];
   EXPECT_EQ(location.args.size(), 4);
@@ -217,14 +217,14 @@ TEST_F(ServerConfigTest, CreateHandlerRegistrations) {
   auto echo_statement = std::make_shared<NginxConfigStatement>();
   echo_statement->tokens_.push_back("location");
   echo_statement->tokens_.push_back("/echo");
-  echo_statement->tokens_.push_back("echo");
+  echo_statement->tokens_.push_back("EchoHandler");
   nginx_config_.statements_.push_back(echo_statement);
 
   // Static handler
   auto static_statement = std::make_shared<NginxConfigStatement>();
   static_statement->tokens_.push_back("location");
   static_statement->tokens_.push_back("/static");
-  static_statement->tokens_.push_back("static");
+  static_statement->tokens_.push_back("StaticHandler");
   
   auto static_child_block = std::make_unique<NginxConfig>();
   auto root_statement = std::make_shared<NginxConfigStatement>();
@@ -238,7 +238,7 @@ TEST_F(ServerConfigTest, CreateHandlerRegistrations) {
   EXPECT_TRUE(config_.ParseConfig(nginx_config_));
 
   auto registrations = config_.CreateHandlerRegistrations();
-  EXPECT_EQ(registrations.size(), 2);
+  EXPECT_EQ(registrations.size(), 3);
   
   // Check echo handler registration
   ASSERT_TRUE(registrations.find("/echo") != registrations.end());
@@ -251,4 +251,29 @@ TEST_F(ServerConfigTest, CreateHandlerRegistrations) {
   EXPECT_EQ(registrations["/static"].args.size(), 2);
   EXPECT_EQ(registrations["/static"].args[0], "/static");
   EXPECT_EQ(registrations["/static"].args[1], "/path/to/files");
+}
+
+TEST_F(ServerConfigTest, ParseQuotedArgumentThrows) {
+  // Create config with port
+  auto port_statement = std::make_shared<NginxConfigStatement>();
+  port_statement->tokens_.push_back("listen");
+  port_statement->tokens_.push_back("8080");
+  nginx_config_.statements_.push_back(port_statement);
+
+  // Static handler with quoted root argument
+  auto static_statement = std::make_shared<NginxConfigStatement>();
+  static_statement->tokens_.push_back("location");
+  static_statement->tokens_.push_back("/static");
+  static_statement->tokens_.push_back("StaticHandler");
+  auto static_child_block = std::make_unique<NginxConfig>();
+  auto root_statement = std::make_shared<NginxConfigStatement>();
+  root_statement->tokens_.push_back("root");
+  root_statement->tokens_.push_back("\"/quoted/path\""); // Quoted string
+  static_child_block->statements_.push_back(root_statement);
+  static_statement->child_block_ = std::move(static_child_block);
+  nginx_config_.statements_.push_back(static_statement);
+
+  EXPECT_THROW({
+    config_.ParseConfig(nginx_config_);
+  }, std::invalid_argument);
 }

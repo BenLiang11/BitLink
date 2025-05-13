@@ -103,7 +103,7 @@ private:
     /**
      * @brief Add default location if none specified.
      */
-    void AddDefaultLocationIfNeeded();
+    void AddDefaultNotFoundHandler();
     
     /**
      * @brief Validate configuration completeness and consistency.
@@ -126,6 +126,9 @@ private:
 
     int port_;
     std::vector<LocationConfig> locations_;
+    const std::string ECHO_HANDLER_NAME = "EchoHandler";
+    const std::string STATIC_FILE_HANDLER_NAME = "StaticHandler";
+    const std::string NOT_FOUND_HANDLER_NAME = "NotFoundHandler";
 };
 
 #endif // SERVER_CONFIG_H 

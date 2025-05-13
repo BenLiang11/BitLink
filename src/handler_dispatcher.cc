@@ -37,12 +37,15 @@ std::unique_ptr<RequestHandler> HandlerDispatcher::CreateHandlerForRequest(const
     // Find the best matching location
     std::string best_match = FindLongestPrefixMatch(uri);
     if (best_match.empty()) {
-        std::cout << "No handler found for URI: " << uri << std::endl;
-        return nullptr;
+        best_match = "/";
     }
     
     // Get the handler registration
-    const HandlerRegistration& reg = handler_registrations_.at(best_match);
+    const auto it = handler_registrations_.find(best_match);
+    if (it == handler_registrations_.end()) {
+        return nullptr;
+    }
+    const HandlerRegistration& reg = it->second;
     
     std::cout << "Creating handler " << reg.handler_name << " for URI: " << uri 
               << " (matched location: " << best_match << ")" << std::endl;

@@ -4,6 +4,7 @@
 #include "common_exceptions.h"
 #include "handlers/echo_handler.h"
 #include "handlers/static_file_handler.h"
+#include "handlers/not_found_handler.h"
 #include "handler_registry.h"
 #include <map>
 #include <memory>
@@ -31,6 +32,7 @@ protected:
         // Register handlers with the registry
         ASSERT_TRUE(HandlerRegistry::RegisterHandler("EchoHandler", EchoHandler::Create));
         ASSERT_TRUE(HandlerRegistry::RegisterHandler("StaticHandler", StaticFileHandler::Create));
+        ASSERT_TRUE(HandlerRegistry::RegisterHandler("NotFoundHandler", NotFoundHandler::Create));
         
         // Create mock handler registrations for different paths
         // Echo handler for /echo
@@ -45,7 +47,7 @@ protected:
         
         // Echo handler for root path
         root_registration.location = "/";
-        root_registration.handler_name = "EchoHandler";
+        root_registration.handler_name = "NotFoundHandler";
         root_registration.args = {};
         
         // Set up the handler registrations map
@@ -84,7 +86,7 @@ TEST_F(HandlerDispatcherTest, ExactPathMatch) {
     MockRequest req_root("/");
     handler = dispatcher->CreateHandlerForRequest(req_root);
     ASSERT_NE(handler, nullptr);
-    EXPECT_NE(dynamic_cast<EchoHandler*>(handler.get()), nullptr);
+    EXPECT_NE(dynamic_cast<NotFoundHandler*>(handler.get()), nullptr);
 }
 
 /**
@@ -226,6 +228,9 @@ TEST_F(HandlerDispatcherTest, PathComponentMatching) {
     echo_reg.handler_name = "EchoHandler";
     echo_reg.args = {};
     registrations["/echo"] = echo_reg;
+
+    HandlerRegistration not_found_handler = {"/", "NotFoundHandler", {}};
+    registrations["/"] = not_found_handler;
     
     HandlerDispatcher path_dispatcher(registrations);
     
@@ -238,5 +243,6 @@ TEST_F(HandlerDispatcherTest, PathComponentMatching) {
     // This should not match (it's a partial path component match)
     MockRequest invalid_req("/echo123");
     auto handler2 = path_dispatcher.CreateHandlerForRequest(invalid_req);
-    EXPECT_EQ(handler2, nullptr);
+    ASSERT_NE(handler2, nullptr);
+    EXPECT_NE(dynamic_cast<NotFoundHandler*>(handler2.get()), nullptr);
 } 

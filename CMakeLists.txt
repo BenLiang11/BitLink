@@ -68,7 +68,8 @@ target_include_directories(handler_registry_lib PUBLIC ${CMAKE_SOURCE_DIR}/inclu
 # Handlers library
 add_library(handlers_lib 
             src/handlers/echo_handler.cc 
-            src/handlers/static_file_handler.cc)
+            src/handlers/static_file_handler.cc
+            src/handlers/not_found_handler.cc)
 target_include_directories(handlers_lib PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(handlers_lib mime_types_lib request_lib response_lib handler_registry_lib)
 

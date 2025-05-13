@@ -27,7 +27,7 @@ public:
    * @param io_context The asio IO context for async operations.
    * @param handler_dispatcher The dispatcher that matches requests to handlers.
    */
-  session(boost::asio::io_service& io_context, const HandlerDispatcher& handler_dispatcher);
+  session(boost::asio::io_context& io_context, const HandlerDispatcher& handler_dispatcher);
   
   /**
    * @brief Virtual destructor to ensure proper cleanup of derived classes.
