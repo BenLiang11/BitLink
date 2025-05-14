@@ -179,3 +179,23 @@ TEST_F(HandlerRegistryTest, NotFoundHandler_Create_WithArguments) {
         FAIL() << "Expected std::invalid_argument exception, but got a different exception.";
     }
 }
+
+/**
+ * @brief Test NotFoundHandler's request handling and response
+ */
+TEST_F(HandlerRegistryTest, NotFoundHandler_HandleRequest) {
+    std::vector<std::string> args;  // No arguments
+    auto handler = HandlerRegistry::CreateHandler("NotFoundHandler", args);
+
+    // Create a request to pass to the handler
+    Request req;
+    req.set_body("Some request body");  // Request body (not used by NotFoundHandler)
+
+    // Handle the request
+    auto response = handler->handle_request(req);
+
+    // Check the response status code and body
+    ASSERT_NE(response, nullptr);
+    EXPECT_EQ(response->get_status_code(), 404);  // Should return 404
+    EXPECT_EQ(response->get_body(), "Not Found");  // Response body should be "Not Found"
+}
