@@ -13,6 +13,9 @@
 #include "server_config.h"
 #include "handler_server.h"
 #include "handler_dispatcher.h"
+#include "handlers/echo_handler.h"
+#include "handlers/static_file_handler.h"
+#include "handlers/not_found_handler.h"
 
 int main(int argc, char* argv[]) {
   init_logging();
@@ -37,6 +40,10 @@ int main(int argc, char* argv[]) {
       std::cerr << "Failed to parse server configuration\n";
       return 1;
     }
+
+    assert(HandlerRegistry::RegisterHandler("EchoHandler", EchoHandler::Create));
+    assert(HandlerRegistry::RegisterHandler("StaticHandler", StaticFileHandler::Create));
+    assert(HandlerRegistry::RegisterHandler("NotFoundHandler", NotFoundHandler::Create));
     
     // Create handler registrations based on configuration
     auto handler_registrations = server_config.CreateHandlerRegistrations();
