@@ -2,6 +2,7 @@
 #include "handler_registry.h"
 #include "handlers/echo_handler.h" // For a concrete handler to test with
 #include "handlers/static_file_handler.h" // For StaticFileHandler tests
+#include "handlers/not_found_handler.h" // For NotFoundHandler tests
 #include <vector>
 #include <string>
 #include <memory>
@@ -36,6 +37,7 @@ protected:
         ASSERT_TRUE(HandlerRegistry::RegisterHandler("MockTestHandler", MockTestHandler::Create));
         ASSERT_TRUE(HandlerRegistry::RegisterHandler("EchoHandler", EchoHandler::Create));
         ASSERT_TRUE(HandlerRegistry::RegisterHandler("StaticHandler", StaticFileHandler::Create));
+        ASSERT_TRUE(HandlerRegistry::RegisterHandler("NotFoundHandler", NotFoundHandler::Create)); 
     }
 };
 
@@ -149,3 +151,31 @@ TEST_F(HandlerRegistryTest, MultipleHandlerInstances) {
     // Verify they are different instances
     EXPECT_NE(handler1.get(), handler2.get());
 } 
+
+/**
+ * @brief Test NotFoundHandler creation with no arguments
+ */
+TEST_F(HandlerRegistryTest, NotFoundHandler_Create_NoArguments) {
+    std::vector<std::string> args;  // No arguments
+    try {
+        auto handler = HandlerRegistry::CreateHandler("NotFoundHandler", args);
+        ASSERT_NE(handler, nullptr);
+    } catch (const std::exception& e) {
+        FAIL() << "Unexpected exception: " << e.what();
+    }
+}
+
+/**
+ * @brief Test NotFoundHandler creation with arguments
+ */
+TEST_F(HandlerRegistryTest, NotFoundHandler_Create_WithArguments) {
+    std::vector<std::string> args = {"unexpected_argument"};  // Invalid argument
+    try {
+        auto handler = HandlerRegistry::CreateHandler("NotFoundHandler", args);
+        FAIL() << "Expected exception due to arguments, but no exception was thrown.";
+    } catch (const std::invalid_argument& e) {
+        EXPECT_STREQ(e.what(), "NotFoundHandler expects no arguments.");
+    } catch (...) {
+        FAIL() << "Expected std::invalid_argument exception, but got a different exception.";
+    }
+}
