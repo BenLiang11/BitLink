@@ -37,7 +37,8 @@ protected:
         ASSERT_TRUE(HandlerRegistry::RegisterHandler("MockTestHandler", MockTestHandler::Create));
         ASSERT_TRUE(HandlerRegistry::RegisterHandler("EchoHandler", EchoHandler::Create));
         ASSERT_TRUE(HandlerRegistry::RegisterHandler("StaticHandler", StaticFileHandler::Create));
-       // ASSERT_TRUE(HandlerRegistry::RegisterHandler("NotFoundHandler", NotFoundHandler::Create)); 
+        ASSERT_TRUE(HandlerRegistry::RegisterHandler("NotFoundHandler", NotFoundHandler::Create)); 
+
     }
 };
 
@@ -155,52 +156,48 @@ TEST_F(HandlerRegistryTest, MultipleHandlerInstances) {
 /**
  * @brief Test NotFoundHandler creation with no arguments
  */
-/*
 TEST_F(HandlerRegistryTest, NotFoundHandler_Create_NoArguments) {
     std::vector<std::string> args;  // No arguments
-    try {
-        auto handler = HandlerRegistry::CreateHandler("NotFoundHandler", args);
-        ASSERT_NE(handler, nullptr);
-    } catch (const std::exception& e) {
-        FAIL() << "Unexpected exception: " << e.what();
-    }
+    auto handler = HandlerRegistry::CreateHandler("NotFoundHandler", args);
+    ASSERT_NE(handler, nullptr);
+    NotFoundHandler* casted_handler = dynamic_cast<NotFoundHandler*>(handler.get());
+    ASSERT_NE(casted_handler, nullptr);
 }
 
 /**
  * @brief Test NotFoundHandler creation with arguments
  */
-/**/
-/*
-TEST_F(HandlerRegistryTest, NotFoundHandler_Create_WithArguments) {
-    std::vector<std::string> args = {"unexpected_argument"};  // Invalid argument
-    try {
-        auto handler = HandlerRegistry::CreateHandler("NotFoundHandler", args);
-        FAIL() << "Expected exception due to arguments, but no exception was thrown.";
-    } catch (const std::invalid_argument& e) {
-        EXPECT_STREQ(e.what(), "NotFoundHandler expects no arguments.");
-    } catch (...) {
-        FAIL() << "Expected std::invalid_argument exception, but got a different exception.";
-    }
-}
-*/
+
+// TEST_F(HandlerRegistryTest, NotFoundHandler_Create_WithArguments) {
+//     std::vector<std::string> args = {"unexpected_argument"};  // Invalid argument
+//     auto handler = HandlerRegistry::CreateHandler("NotFoundHandler", args);
+//     ASSERT_NE(handler, nullptr);
+//     NotFoundHandler* casted_handler = dynamic_cast<NotFoundHandler*>(handler.get());
+//     ASSERT_NE(casted_handler, nullptr);
+// }
 /**
  * @brief Test NotFoundHandler's request handling and response
  */
-/** *
 TEST_F(HandlerRegistryTest, NotFoundHandler_HandleRequest) {
     std::vector<std::string> args;  // No arguments
     auto handler = HandlerRegistry::CreateHandler("NotFoundHandler", args);
 
-    // Create a request to pass to the handler
-    Request req;
-    req.set_body("Some request body");  // Request body (not used by NotFoundHandler)
+    // Create a request with a body
+    std::string raw_request = 
+        "GET /nonexistent HTTP/1.1\r\n"
+        "Host: localhost:8080\r\n"
+        "Content-Length: 13\r\n"
+        "\r\n"
+        "Some request body";
 
+    Request req(raw_request);
     // Handle the request
     auto response = handler->handle_request(req);
 
     // Check the response status code and body
     ASSERT_NE(response, nullptr);
-    EXPECT_EQ(response->get_status_code(), 404);  // Should return 404
-    EXPECT_EQ(response->get_body(), "Not Found");  // Response body should be "Not Found"
+    EXPECT_EQ(response->status(), Response::NOT_FOUND);  // Should return 404
+    EXPECT_EQ(response->body(), "<html><body><h1>404 Not Found</h1><p>The requested file could not be found.</p></body></html>");
+    EXPECT_EQ(response->headers().at("Content-Type"), "text/html");
+    EXPECT_EQ(response->headers().at("Connection"), "close");
 }
-*/
