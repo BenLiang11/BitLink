@@ -109,6 +109,7 @@ if(NOT DOCKER_BUILD)
   include(GoogleTest)
   add_subdirectory(/usr/src/googletest googletest)
 
+
   add_executable(config_parser_test tests/config_parser_test.cc)
   target_link_libraries(config_parser_test config_parser gtest_main)
   gtest_discover_tests(config_parser_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
