@@ -36,7 +36,7 @@ make
 ```
 Running the server
 ```
-./bin/server ../../config/server_config.conf
+./bin/server ../config/server_config.conf
 
 # Example test: logger_test
 ./bin/logger_test
