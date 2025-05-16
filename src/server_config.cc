@@ -63,7 +63,7 @@ std::map<std::string, HandlerRegistration> ServerConfig::CreateHandlerRegistrati
                 reg.handler_name = "StaticHandler";
                 
                 // Convert typed arguments to string vector
-                reg.args = TypedArgsToStringVector(location_path, location.args);
+                reg.args = TypedArgsToStringVectorForStaticFileHandler(location_path, location.args);
                 
                 std::cout << "Added StaticHandler registration for path: " << location_path << std::endl;
             }
@@ -71,6 +71,12 @@ std::map<std::string, HandlerRegistration> ServerConfig::CreateHandlerRegistrati
                 reg.handler_name = "NotFoundHandler";
                 reg.args = {}; // NotFoundHandler takes no args
                 std::cout << "Added NotFoundHandler registration for path: " << location_path << std::endl;
+            }
+            else if (location.handler_type == API_HANDLER_NAME) {
+                reg.handler_name = API_HANDLER_NAME;
+                reg.args = TypedArgsToStringVectorForApiHandler(location_path, location.args);
+                std::cout << "Added "+API_HANDLER_NAME+" registration for path: " << location_path << std::endl;
+
             }
             else {
                 std::cerr << "Warning: Unknown handler type '" << location.handler_type 
@@ -91,7 +97,7 @@ std::map<std::string, HandlerRegistration> ServerConfig::CreateHandlerRegistrati
 }
 
 // Convert typed arguments to string vector for HandlerRegistry
-std::vector<std::string> ServerConfig::TypedArgsToStringVector(
+std::vector<std::string> ServerConfig::TypedArgsToStringVectorForStaticFileHandler(
     const std::string& location_path, 
     const std::map<std::string, TypedValue>& typed_args) const {
     
@@ -117,6 +123,35 @@ std::vector<std::string> ServerConfig::TypedArgsToStringVector(
     
     return args;
 }
+
+// Convert typed arguments to string vector for HandlerRegistry
+std::vector<std::string> ServerConfig::TypedArgsToStringVectorForApiHandler(
+    const std::string& location_path, 
+    const std::map<std::string, TypedValue>& typed_args) const {
+    
+    std::vector<std::string> args;
+    
+    // First argument is always the location path
+    args.push_back(location_path);
+    
+    // For StaticHandler, we need the data_path directory
+    if (typed_args.find("data_path") != typed_args.end()) {
+        const auto& data_path_value = typed_args.at("data_path");
+        if (std::holds_alternative<std::string>(data_path_value)) {
+            args.push_back(std::get<std::string>(data_path_value));
+        } else {
+            std::cerr << "Warning: data_path value for path " << location_path << " is not a string" << std::endl;
+            args.push_back("./"); // Default to current directory
+        }
+    } else {
+        std::cerr << "Warning: no data_path directory specified for api handler at " 
+                 << location_path << std::endl;
+        args.push_back("./"); // Default to current directory
+    }
+    
+    return args;
+}
+
 
 // Parses and validates the port string, returning true if successful
 bool ServerConfig::ParsePortDirective(const std::string& port_str) {

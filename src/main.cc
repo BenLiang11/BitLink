@@ -16,6 +16,7 @@
 #include "handlers/echo_handler.h"
 #include "handlers/static_file_handler.h"
 #include "handlers/not_found_handler.h"
+#include "handlers/api_handler.h"
 
 int main(int argc, char* argv[]) {
   init_logging();
@@ -44,7 +45,8 @@ int main(int argc, char* argv[]) {
     assert(HandlerRegistry::RegisterHandler("EchoHandler", EchoHandler::Create));
     assert(HandlerRegistry::RegisterHandler("StaticHandler", StaticFileHandler::Create));
     assert(HandlerRegistry::RegisterHandler("NotFoundHandler", NotFoundHandler::Create));
-    
+    assert(HandlerRegistry::RegisterHandler("ApiHandler", ApiHandler::Create) == false);
+
     // Create handler registrations based on configuration
     auto handler_registrations = server_config.CreateHandlerRegistrations();
     

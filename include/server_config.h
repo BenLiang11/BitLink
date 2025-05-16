@@ -120,15 +120,19 @@ private:
      * @param typed_args The typed arguments.
      * @return A vector of string arguments.
      */
-    std::vector<std::string> TypedArgsToStringVector(
+    std::vector<std::string> TypedArgsToStringVectorForStaticFileHandler(
         const std::string& location_path,
         const std::map<std::string, TypedValue>& typed_args) const;
-
+    std::vector<std::string> TypedArgsToStringVectorForApiHandler(
+        const std::string& location_path,
+        const std::map<std::string, TypedValue>& typed_args) const;
+    
     int port_;
     std::vector<LocationConfig> locations_;
     const std::string ECHO_HANDLER_NAME = "EchoHandler";
     const std::string STATIC_FILE_HANDLER_NAME = "StaticHandler";
     const std::string NOT_FOUND_HANDLER_NAME = "NotFoundHandler";
+    const std::string API_HANDLER_NAME = "ApiHandler";
 };
 
 #endif // SERVER_CONFIG_H 
