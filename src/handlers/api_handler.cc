@@ -23,16 +23,70 @@ ApiHandler::ApiHandler(const std::string& serving_path, const std::string& root_
 std::unique_ptr<Response> ApiHandler::handle_request(const Request& req) {
     auto response = std::make_unique<Response>();
 
-    if (req.method() != "GET") {
-        response->set_status(Response::NOT_FOUND);
+    std::string request_uri = req.uri();
+    std::string request_method = req.method();
+
+    if ((request_uri.length() <= 5) || (request_uri.substr(0,5) != "/api/")) {
+        response->set_status(Response::FORBIDDEN);
         response->set_header("Content-Type", "text/html");
-        response->set_body("<html><body><h1>405 Method Not Allowed</h1></body></html>");
+        response->set_body("<html><body><h1>403 Forbidden</h1>"
+        "<p>You may only access subdirectories of the /api directory.</p>"
+        "<p>For example: /api/Shoes</p></body></html>");
         return response;
     }
 
+    std::string relative_path = request_uri.substr(5);
+    fs::path fs_root_path = root_directory_;
+    fs::path fs_relative_path = relative_path;
+    fs::path base_file_path = fs_root_path / fs_relative_path;
+
+    if (request_method == "POST") {
+        // Handle POST request
+        int id = 1;
+        while (fs::exists(base_file_path / (std::to_string(id)))) {
+            id++;
+        }
+
+        std::ofstream file(base_file_path.string() + "/" + std::to_string(id), std::ios::binary);
+        file << req.body();
+        file.close();
+
+        response->set_status(Response::CREATED);
+        response->set_header("Content-Type", "text/html");
+        response->set_body("{\"id\": "+std::to_string(id)+"}");
+        return response;
+    }
+
+    if (request_method == "PUT") {
+        // Handle PUT request
+
+        if (!fs::exists(base_file_path)) {
+            response->set_status(Response::NOT_FOUND);
+            response->set_header("Content-Type", "text/html");
+            response->set_body("<html><body><h1>404 Not Found</h1><p>The requested file could not be found.</p></body></html>");
+            return response;
+        }
+
+        std::ofstream file(base_file_path.string(), std::ios::binary);
+        file << req.body();
+        file.close();
+
+        response->set_status(Response::OK);
+        response->set_header("Content-Type", "text/html");
+        response->set_body("<html><body><h1>200 OK</h1><p>File updated successfully.</p></body></html>");
+        return response;
+    }
+
+    // if (req.method() != "GET") {
+    //     response->set_status(Response::NOT_FOUND);
+    //     response->set_header("Content-Type", "text/html");
+    //     response->set_body("<html><body><h1>405 Method Not Allowed</h1></body></html>");
+    //     return response;
+    // }
+
     response->set_status(Response::OK);
     response->set_header("Content-Type", "text/html");
-    response->set_body("<html><body><h1>ApiHandler is not yet implemented</h1><p>Serving path is: "+this->serving_path_+
+    response->set_body("<html><body><h1>ApiHandler is not yet fully implemented</h1><p>Serving path is: "+this->serving_path_+
     "Root directory is: "+this->root_directory_+"</p></body></html>");
     return response;
 
