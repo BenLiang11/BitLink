@@ -77,6 +77,88 @@ std::unique_ptr<Response> ApiHandler::handle_request(const Request& req) {
         return response;
     }
 
+    if (request_method == "GET") {
+        // Handle GET request
+        if (!fs::exists(base_file_path)) {
+            // Handle nonexistant get request.
+            response->set_status(Response::NOT_FOUND);
+            response->set_header("Content-Type", "text/html");
+            response->set_body("<html><body><h1>404 Not Found</h1><p>The requested file could not be found.</p></body></html>");
+            return response;
+        }
+
+        if (fs::is_directory(base_file_path)) {
+            // Handle list operation
+            std::string response_body = "{\"file_ids\": [";
+            for (const auto& entry : fs::directory_iterator(base_file_path)) {
+                if (fs::is_regular_file(entry.path())) {
+                    response_body += entry.path().filename().string() + ",";
+                }
+            }
+            response_body.pop_back(); // Remove trailing comma
+            response_body += "]}";
+
+            response->set_status(Response::OK);
+            response->set_header("Content-Type", "application/json");
+            response->set_body(response_body);
+            return response;
+        }
+
+        if (fs::is_regular_file(base_file_path)) {
+            // Handle get operation
+            std::ifstream file(base_file_path.string(), std::ios::binary);
+            if (!file) {
+                response->set_status(Response::INTERNAL_SERVER_ERROR);
+                response->set_header("Content-Type", "text/html");
+                response->set_body("<html><body><h1>500 Internal Server Error</h1><p>Error reading file.</p></body></html>");
+                return response;
+            }
+
+            std::stringstream content;
+            content << file.rdbuf();
+
+            response->set_status(Response::OK);
+            response->set_header("Content-Type", "application/json");
+            response->set_body(content.str());
+            return response;
+        }
+
+        //Unsupported file type
+        response->set_status(Response::INTERNAL_SERVER_ERROR);
+        response->set_header("Content-Type", "text/html");
+        response->set_body("<html><body><h1>500 Internal Server Error</h1><p>Unsupported file type.</p></body></html>");
+        return response;
+    }
+
+    if (request_method == "DELETE") {
+        // Handle DELETE request
+        if (!fs::exists(base_file_path)) {
+            response->set_status(Response::NOT_FOUND);
+            response->set_header("Content-Type", "text/html");
+            response->set_body("<html><body><h1>404 Not Found</h1><p>The requested file could not be found.</p></body></html>");
+            return response;
+        }
+
+        if (!fs::is_regular_file(base_file_path)) {
+            response->set_status(Response::INTERNAL_SERVER_ERROR);
+            response->set_header("Content-Type", "text/html");
+            response->set_body("<html><body><h1>500 Internal Server Error</h1><p>File is not a regular file and cannot be deleted.</p></body></html>");
+            return response;
+        }
+
+        if (!fs::remove(base_file_path)) {
+            response->set_status(Response::INTERNAL_SERVER_ERROR);
+            response->set_header("Content-Type", "text/html");
+            response->set_body("<html><body><h1>500 Internal Server Error</h1><p>Error deleting file.</p></body></html>");
+            return response;
+        }
+
+        response->set_status(Response::OK);
+        response->set_header("Content-Type", "text/html");
+        response->set_body("<html><body><h1>200 OK</h1><p>File deleted successfully.</p></body></html>");
+        return response;
+    }
+
     // if (req.method() != "GET") {
     //     response->set_status(Response::NOT_FOUND);
     //     response->set_header("Content-Type", "text/html");
