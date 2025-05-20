@@ -128,9 +128,11 @@ target_link_libraries(session_test session_lib gtest_main gmock_main)
 add_executable(echo_handler_test tests/echo_handler_test.cc)
 add_executable(static_file_handler_test tests/static_file_handler_test.cc)
 add_executable(handler_registry_test tests/handler_registry_test.cc)
+add_executable(api_handler_test tests/api_handler_test.cc)
 target_link_libraries(echo_handler_test gtest_main gmock_main handlers_lib request_lib response_lib handler_registry_lib)
 target_link_libraries(static_file_handler_test gtest_main gmock_main mime_types_lib handlers_lib request_lib response_lib handler_registry_lib)
 target_link_libraries(handler_registry_test gtest_main gmock_main handler_registry_lib handlers_lib)
+target_link_libraries(api_handler_test gtest_main gmock_main mime_types_lib handlers_lib request_lib response_lib handler_registry_lib)
 
 # New tests for request, response, and mime_types
 add_executable(request_test tests/request_test.cc)
@@ -175,6 +177,7 @@ gtest_discover_tests(logger_rotation_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOUR
 gtest_discover_tests(server_config_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
 gtest_discover_tests(handler_server_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
 gtest_discover_tests(handler_dispatcher_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+gtest_discover_tests(api_handler_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
 
 # Integration test
 add_custom_target(integration_test
