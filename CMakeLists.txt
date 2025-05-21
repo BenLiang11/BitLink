@@ -229,3 +229,5 @@ generate_coverage_report(
     logger_test
     logger_rotation_test
 )
+
+add_test(NAME IntegrationTest COMMAND bash ../tests/test_integration.sh)

@@ -45,7 +45,7 @@ int main(int argc, char* argv[]) {
     assert(HandlerRegistry::RegisterHandler("EchoHandler", EchoHandler::Create));
     assert(HandlerRegistry::RegisterHandler("StaticHandler", StaticFileHandler::Create));
     assert(HandlerRegistry::RegisterHandler("NotFoundHandler", NotFoundHandler::Create));
-    assert(HandlerRegistry::RegisterHandler("ApiHandler", ApiHandler::Create) == false);
+    assert(HandlerRegistry::RegisterHandler("ApiHandler", ApiHandler::Create));
 
     // Create handler registrations based on configuration
     auto handler_registrations = server_config.CreateHandlerRegistrations();

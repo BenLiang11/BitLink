@@ -20,9 +20,11 @@ int RealFileSystem::read_file(const std::string& file_path, std::stringstream& o
 }
 
 int RealFileSystem::overwrite_file(const std::string& file_path, const std::stringstream& in_file_data) {
+    std::filesystem::create_directories(std::filesystem::path(file_path).parent_path());
     std::ofstream file(file_path, std::ios::binary);
     file << in_file_data.rdbuf();
     file.close();
+    //std::filesystem::remove_all("./data");
     return  0;
 }
 
