@@ -77,6 +77,86 @@ run_tests() {
         echo "✗ 404 test failed"
         ((test_failed++))
     fi
+
+    # Comprehensive integration test for testing all API methods 
+    
+    # Setup API test directory
+    mkdir -p "${API_DATA_DIR}/products"
+    
+    # 1. Test API POST
+    local post_data='{"name": "Test Product", "price": 19.99, "inStock": true}'
+    local post_response=$(curl -s -X POST -d "$post_data" --connect-timeout $REQUEST_TIMEOUT "http://${SERVER_HOST}:${SERVER_PORT}/api/products")
+    
+    # Extract ID from POST response for later tests
+    local product_id=$(echo $post_response | grep -o '"id":[^,}]*' | head -1 | cut -d ':' -f2)
+    
+    if [[ "$post_response" == *"\"id\""* && ! -z "$product_id" ]]; then
+        echo "✓ API handler POST test passed (created product with ID: $product_id)"
+        ((test_success++))
+    else
+        echo "✗ API handler POST test failed"
+        ((test_failed++))
+        # Use default ID for remaining tests in case POST failed
+        product_id=1
+    fi
+    
+    # 2. Test API GET (for a list)
+    echo "Testing API handler (GET - List collection)..."
+    local list_response=$(curl -s -X GET --connect-timeout $REQUEST_TIMEOUT "http://${SERVER_HOST}:${SERVER_PORT}/api/products")
+    
+    if [[ "$list_response" == *"\"file_ids\""* && "$list_response" == *"$product_id"* ]]; then
+        echo "✓ API handler GET collection test passed"
+        ((test_success++))
+    else
+        echo "✗ API handler GET collection test failed"
+        ((test_failed++))
+    fi
+    
+    # 3. Test API GET (for a single resource)
+    echo "Testing API handler (GET - Retrieve single resource)..."
+    local get_response=$(curl -s -X GET --connect-timeout $REQUEST_TIMEOUT "http://${SERVER_HOST}:${SERVER_PORT}/api/products/$product_id")
+    
+    if [[ "$get_response" == *"\"name\""* && "$get_response" == *"\"price\""* ]]; then
+        echo "✓ API handler GET single resource test passed"
+        ((test_success++))
+    else
+        echo "✗ API handler GET single resource test failed"
+        ((test_failed++))
+    fi
+    
+    # 4. Test API PUT
+    echo "Testing API handler (PUT - Update)..."
+    local put_data='{"name": "Updated Product", "price": 29.99, "inStock": false}'
+    local put_response=$(curl -s -X PUT -d "$put_data" --connect-timeout $REQUEST_TIMEOUT "http://${SERVER_HOST}:${SERVER_PORT}/api/products/$product_id")
+    
+    # GET again to verify the update
+    local updated_get_response=$(curl -s -X GET --connect-timeout $REQUEST_TIMEOUT "http://${SERVER_HOST}:${SERVER_PORT}/api/products/$product_id")
+    
+    if [[ "$updated_get_response" == *"Updated Product"* && "$updated_get_response" == *"29.99"* ]]; then
+        echo "✓ API handler PUT test passed"
+        ((test_success++))
+    else
+        echo "✗ API handler PUT test failed"
+        ((test_failed++))
+    fi
+    
+    # 5. Test API DELETE
+    echo "Testing API handler (DELETE)..."
+    local delete_response=$(curl -s -X DELETE --connect-timeout $REQUEST_TIMEOUT "http://${SERVER_HOST}:${SERVER_PORT}/api/products/$product_id")
+    
+    # Verify deletion by trying to GET the resource again
+    local deleted_get_response=$(curl -s -I -X GET --connect-timeout $REQUEST_TIMEOUT "http://${SERVER_HOST}:${SERVER_PORT}/api/products/$product_id" | head -n 1)
+    
+    if [[ "$deleted_get_response" == *"404"* ]]; then
+        echo "✓ API handler DELETE test passed"
+        ((test_success++))
+    else
+        echo "✗ API handler DELETE test failed"
+        ((test_failed++))
+    fi
+    
+    # Clean up API test data
+    rm -rf "${API_DATA_DIR}/products"
     
     # Output results
     echo "----------------------------------------"
