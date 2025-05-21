@@ -188,14 +188,13 @@ TEST_F(ApiHandlerTest, PostNewResource) {
   EXPECT_NE(body.find("3"), std::string::npos);  // Since we already have products 1 and 2
   
   // Verify the file was actually created
-  std::string file_path = (temp_dir_ / "products" / "3").string();
-  EXPECT_TRUE(fs::exists(file_path));
+  std::string file_path = temp_dir_ + "products" + "/3";
+  EXPECT_TRUE(fs.exists(file_path));
   
   // Check the content of the created file
-  std::ifstream file(file_path);
-  std::stringstream buffer;
-  buffer << file.rdbuf();
-  EXPECT_EQ(buffer.str(), "{\"name\": \"New Product\", \"price\": 39.99, \"inStock\": true}");
+  std::stringstream output;
+  fs.read_file(file_path, output);
+  EXPECT_EQ(output.str(), "{\"name\": \"New Product\", \"price\": 39.99, \"inStock\": true}");
 }
 
 // Test PUT request to update an existing resource
@@ -221,11 +220,10 @@ TEST_F(ApiHandlerTest, PutExistingResource) {
   EXPECT_EQ(response->status(), Response::OK);
   
   // Verify the file was actually updated
-  std::string file_path = (temp_dir_ / "products" / "1").string();
-  std::ifstream file(file_path);
-  std::stringstream buffer;
-  buffer << file.rdbuf();
-  EXPECT_EQ(buffer.str(), "{\"id\": 1, \"name\": \"Updated Product\", \"price\": 24.99}");
+  std::string file_path = temp_dir_ + "products" + "/1";
+  std::stringstream output;
+  fs.read_file(file_path, output);
+  EXPECT_EQ(output.str(), "{\"id\": 1, \"name\": \"Updated Product\", \"price\": 24.99}");
 }
 
 // Test PUT request for non-existent resource
@@ -271,8 +269,8 @@ TEST_F(ApiHandlerTest, DeleteExistingResource) {
   EXPECT_EQ(response->status(), Response::OK);
   
   // Verify the file was actually deleted
-  std::string file_path = (temp_dir_ / "products" / "2").string();
-  EXPECT_FALSE(fs::exists(file_path));
+  std::string file_path = temp_dir_ + "products" + "/2";
+  EXPECT_FALSE(fs.exists(file_path));
 }
 
 // Test DELETE followed by GET request for an existing resource
@@ -306,8 +304,8 @@ TEST_F(ApiHandlerTest, DeleteAndGet) {
   EXPECT_EQ(response->status(), Response::OK);
   
   // Verify the file was actually deleted
-  std::string file_path = (temp_dir_ / "products" / "2").string();
-  EXPECT_FALSE(fs::exists(file_path));
+  std::string file_path = (temp_dir_ + "products" + "/2");
+  EXPECT_FALSE(fs.exists(file_path));
   
   // Verify the resource is no longer accessible via GET
   std::string get_request = 
