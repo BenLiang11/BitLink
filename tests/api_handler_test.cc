@@ -4,15 +4,14 @@
 #include "response.h"
 #include "mime_types.h"
 #include "handler_registry.h"
-#include "real_file_system.h"
+#include "fake_file_system.h"
+#include <iostream>
 #include <fstream>
 #include <filesystem>
 #include <iostream>
 #include <memory>
 #include <vector>
 #include <string>
-
-namespace fs = std::filesystem;
 
 /**
  * @brief Test fixture for ApiHandler tests
@@ -24,36 +23,35 @@ class ApiHandlerTest : public ::testing::Test {
 protected:
   void SetUp() override {
     // Register the ApiHandler with the registry
-    //HandlerRegistry::RegisterHandler("ApiHandler", ApiHandler::Create);
+    HandlerRegistry::RegisterHandler("ApiHandler", ApiHandler::Create);
     
     // Create a temporary directory for test files
-    temp_dir_ = fs::temp_directory_path() / "api_handler_test";
-    fs::create_directories(temp_dir_);
+    temp_dir_ = "/tmp/api_handler_test/";
+
+    // fs::create_directories(temp_dir_);
     
     // The handler constructor takes (serving_path, root_directory)
-    RealFileSystem rfs;
-    handler_ = std::make_unique<ApiHandler>("/api", temp_dir_.string(), rfs);
+    handler_ = std::make_unique<ApiHandler>("/api", temp_dir_, fs);
     
     // Create test directories directly under temp_dir_
-    std::string products_dir = (temp_dir_ / "products").string();
-    fs::create_directories(products_dir);
+    std::string products_dir = (temp_dir_ + "products");
+    // fs::create_directories(products_dir);
     
     // Add test files to the products directory
-    std::ofstream product1_file((products_dir + "/1").c_str());
-    product1_file << "{\"id\": 1, \"name\": \"Product 1\", \"price\": 19.99}";
-    product1_file.close();
-    
-    std::ofstream product2_file((products_dir + "/2").c_str());
-    product2_file << "{\"id\": 2, \"name\": \"Product 2\", \"price\": 29.99}";
-    product2_file.close();
+    std::stringstream product1_stream;
+    std::stringstream product2_stream;
+    product1_stream << "{\"id\": 1, \"name\": \"Product 1\", \"price\": 19.99}";
+    product2_stream << "{\"id\": 2, \"name\": \"Product 2\", \"price\": 29.99}";
+    fs.overwrite_file(products_dir + "/1", product1_stream);
+    fs.overwrite_file(products_dir + "/2", product2_stream);
   }
   
   void TearDown() override {
-    // Clean up temporary directory and files
-    fs::remove_all(temp_dir_);
+
   }
   
-  fs::path temp_dir_;
+  FakeFileSystem fs;
+  std::string temp_dir_;
   std::unique_ptr<ApiHandler> handler_;
 };
 
@@ -129,13 +127,17 @@ TEST_F(ApiHandlerTest, GetNonExistentResource) {
   Request request(raw_request);
   
   // Call the handler
+  std::cout << "handl request" << std::endl;
   std::unique_ptr<Response> response = handler_->handle_request(request);
+  std::cout << "handl request done" << std::endl;
   
   // Check that we got a response
   ASSERT_NE(response, nullptr);
+  std::cout << "response not null" << std::endl;
   
   // Check the response status
   EXPECT_EQ(response->status(), Response::NOT_FOUND);
+  std::cout << "response not found" << std::endl;
 }
 
 // Test invalid API path

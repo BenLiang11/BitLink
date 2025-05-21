@@ -9,7 +9,6 @@
 #include <iostream>
 #include <stdexcept>
 
-//namespace fs_ = std::filesystem;
 
 ApiHandler::ApiHandler(const std::string& serving_path, const std::string& root_directory, FileSystem& fs)
     : serving_path_(serving_path), root_directory_(root_directory), fs_(fs) {
@@ -22,6 +21,7 @@ ApiHandler::ApiHandler(const std::string& serving_path, const std::string& root_
 }
 
 std::unique_ptr<Response> ApiHandler::handle_request(const Request& req) {
+    std::cout << "Handling request: " << req.method() << " " << req.uri() << std::endl;
     auto response = std::make_unique<Response>();
 
     std::string request_uri = req.uri();
@@ -37,12 +37,11 @@ std::unique_ptr<Response> ApiHandler::handle_request(const Request& req) {
     }
 
     std::string relative_path = request_uri.substr(5);
-    // fs_::path fs__root_path = root_directory_;
-    // fs_::path fs__relative_path = relative_path;
-    // fs_::path base_file_path = fs__root_path / fs__relative_path;
-    std::string base_file_path = root_directory_ + "/" + relative_path;
+    std::string base_file_path = root_directory_ + relative_path;
+    std::cout << "Base File Path: " << base_file_path << std::endl;
 
     if (request_method == "POST") {
+        std::cout << "Handling POST request" << std::endl;
         std::stringstream content(req.body());
         // Handle POST request
         int id = 1;
@@ -50,6 +49,7 @@ std::unique_ptr<Response> ApiHandler::handle_request(const Request& req) {
             id++;
         }
         fs_.overwrite_file(base_file_path + "/" + std::to_string(id), content); 
+        std::cout << "File created with ID: " << id << std::endl;
         // std::ofs_tream file(base_file_path.string() + "/" + std::to_string(id), std::ios::binary);
         // file << req.body();
         // file.close();
@@ -84,8 +84,10 @@ std::unique_ptr<Response> ApiHandler::handle_request(const Request& req) {
     if (request_method == "GET") {
         std::stringstream content;
         // Handle GET request
+        std::cout << "Handling GET request" << std::endl;
         if (!fs_.exists(base_file_path)) {
             // Handle nonexistant get request.
+            std::cout << "File not found: " << base_file_path << std::endl;
             response->set_status(Response::NOT_FOUND);
             response->set_header("Content-Type", "text/html");
             response->set_body("<html><body><h1>404 Not Found</h1><p>The requested file could not be found.</p></body></html>");
@@ -96,6 +98,7 @@ std::unique_ptr<Response> ApiHandler::handle_request(const Request& req) {
             // Handle list operation
             std::string response_body;
             fs_.get_json_list_of_dir(base_file_path, response_body);
+            std::cout << "Directory listing: " << response_body << std::endl;
 
             response->set_status(Response::OK);
             response->set_header("Content-Type", "application/json");

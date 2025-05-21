@@ -3,6 +3,7 @@
 #include <sstream>
 #include <fstream>
 #include <ostream>
+#include <iostream>
 
 #include <filesystem>
 
@@ -26,7 +27,13 @@ int RealFileSystem::overwrite_file(const std::string& file_path, const std::stri
 }
 
 bool RealFileSystem::exists(const std::string& file_path) {
+    std::cout << "Checking if file exists: " << file_path << std::endl;
+    try {
     return fs::exists(static_cast<fs::path>(file_path));
+    } catch (const fs::filesystem_error& e) {
+        std::cerr << "Error checking file existence: " << e.what() << std::endl;
+        return false;
+    }
 }
 
 bool RealFileSystem::is_directory(const std::string& file_path) {return fs::is_directory(static_cast<fs::path>(file_path));}
