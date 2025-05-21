@@ -221,6 +221,7 @@ generate_coverage_report(
     mime_types_test
     echo_handler_test
     static_file_handler_test
+    api_handler_test
     handler_registry_test
     server_config_test
     handler_server_test
