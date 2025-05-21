@@ -1,0 +1,21 @@
+#include "file_system.h"
+#include <string>
+#include <sstream>
+#include <fstream>
+
+#ifndef REAL_FILE_SYSTEM_H
+#define REAL_FILE_SYSTEM_H
+
+class RealFileSystem : public FileSystem {
+public:
+    // Method to read a file from the real file system
+    int read_file(const std::string& file_path, std::stringstream& out_file_data) override;
+    int overwrite_file(const std::string& file_path, const std::stringstream& in_file_data) override;
+    bool exists(const std::string& file_path) override;
+    bool is_directory(const std::string& file_path) override;
+    void get_json_list_of_dir(const std::string& base_file_path, std::string& response_body) override;
+    bool is_regular_file(const std::string& base_file_path) override;
+    bool remove(const std::string& base_file_path) override;
+};
+
+#endif // REAL_FILE_SYSTEM_H

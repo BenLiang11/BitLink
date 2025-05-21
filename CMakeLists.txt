@@ -61,6 +61,10 @@ target_include_directories(response_lib PUBLIC ${CMAKE_SOURCE_DIR}/include)
 add_library(mime_types_lib src/mime_types.cc)
 target_include_directories(mime_types_lib PUBLIC ${CMAKE_SOURCE_DIR}/include)
 
+add_library(file_system_lib 
+            src/real_file_system.cc)
+target_include_directories(file_system_lib PUBLIC ${CMAKE_SOURCE_DIR}/include)
+
 # Registry library
 add_library(handler_registry_lib src/handler_registry.cc)
 target_include_directories(handler_registry_lib PUBLIC ${CMAKE_SOURCE_DIR}/include)
@@ -72,7 +76,7 @@ add_library(handlers_lib
             src/handlers/not_found_handler.cc
             src/handlers/api_handler.cc)
 target_include_directories(handlers_lib PUBLIC ${CMAKE_SOURCE_DIR}/include)
-target_link_libraries(handlers_lib mime_types_lib request_lib response_lib handler_registry_lib)
+target_link_libraries(handlers_lib mime_types_lib request_lib response_lib handler_registry_lib file_system_lib)
 
 # Dispatcher library
 add_library(handler_dispatcher_lib src/handler_dispatcher.cc)

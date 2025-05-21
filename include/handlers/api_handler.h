@@ -2,6 +2,7 @@
 #define API_HANDLER_H
 
 #include "handlers/base_handler.h"
+#include "file_system.h"
 #include <string>
 #include <vector>
 #include <memory>
@@ -22,8 +23,9 @@ public:
      * @param serving_path The URL prefix this handler is registered for (e.g., "/api").
      * @param root_directory The root directory on the filesystem from which to serve files (e.g., "./files").
      *                       This path is relative to the webserver binary location as per Common API.
+     * @param file_system
      */
-    ApiHandler(const std::string& serving_path, const std::string& root_directory);
+    ApiHandler(const std::string& serving_path, const std::string& root_directory, FileSystem& file_system);
 
     /**
      * @brief Handle an HTTP request by performing the appropriate CRUD operation.
@@ -46,6 +48,7 @@ public:
 private:
     std::string serving_path_;
     std::string root_directory_;
+    FileSystem& fs_;
 
     /**
      * @brief Get the MIME type for a file based on its extension.

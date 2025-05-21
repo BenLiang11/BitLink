@@ -4,6 +4,7 @@
 #include "response.h"
 #include "mime_types.h"
 #include "handler_registry.h"
+#include "real_file_system.h"
 #include <fstream>
 #include <filesystem>
 #include <iostream>
@@ -23,14 +24,15 @@ class ApiHandlerTest : public ::testing::Test {
 protected:
   void SetUp() override {
     // Register the ApiHandler with the registry
-    HandlerRegistry::RegisterHandler("ApiHandler", ApiHandler::Create);
+    //HandlerRegistry::RegisterHandler("ApiHandler", ApiHandler::Create);
     
     // Create a temporary directory for test files
     temp_dir_ = fs::temp_directory_path() / "api_handler_test";
     fs::create_directories(temp_dir_);
     
     // The handler constructor takes (serving_path, root_directory)
-    handler_ = std::make_unique<ApiHandler>("/api", temp_dir_.string());
+    RealFileSystem rfs;
+    handler_ = std::make_unique<ApiHandler>("/api", temp_dir_.string(), rfs);
     
     // Create test directories directly under temp_dir_
     std::string products_dir = (temp_dir_ / "products").string();
