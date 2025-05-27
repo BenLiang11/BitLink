@@ -29,6 +29,21 @@ void init_logging() {
                 << "] " << expr::smessage
         )
     );
+
+    // ADD THIS: JSON file log for machine processing
+    logging::add_file_log(
+        keywords::file_name = "logs/server.json",        
+        keywords::open_mode = std::ios_base::app,
+        keywords::format = (
+            expr::stream
+                << "{"
+                << "\"timestamp\":\"" << expr::format_date_time<boost::posix_time::ptime>("TimeStamp", "%Y-%m-%dT%H:%M:%S.%fZ") << "\","
+                << "\"thread\":\"" << expr::attr<boost::log::attributes::current_thread_id::value_type>("ThreadID") << "\","
+                << "\"level\":\"" << logging::trivial::severity << "\","
+                << "\"message\":\"" << expr::smessage << "\""
+                << "}"
+        )
+    );
     
     // Add console logging to stdout with the same format
     logging::add_console_log(

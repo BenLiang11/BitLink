@@ -11,6 +11,7 @@ I-AM-STEVE is a modular and extensible web server written in modern C++17. It su
 - Docker (for builds/tests)
 
 ## Project Structure
+
 ```
 I-AM-STEVE/
 ├── build/                         # CMake build output directory
@@ -29,32 +30,40 @@ I-AM-STEVE/
 ## Getting Started
 
 ### Build & Test Instructions
+
 ```bash
 mkdir build && cd build
 cmake ..
 make
 ```
+
 Running the server
+
 ```
 ./bin/server ../config/server_config.conf
 
 # Example test: logger_test
 ./bin/logger_test
 ```
+
 An example
 We can also create coverage reports with the following commands
+
 ```
 mkdir build_coverage
 cd build_coverage
 cmake -DCMAKE_BUILD_TYPE=Coverage ..
 make coverage
 ```
+
 Download the HTML files in `/build_coverage/report/` to view full coverage report
 
 ### Adding a New Request Handler
+
 The server's functionality is extended by implementing new request handlers. Each handler is responsible for processing a specific type of request or handling requests for a particular URL prefix. Here's how to add a new handler:
 
 1. Define the Handler Class:Create a new header file (e.g., `include/handlers/my_handler.h`) and source file (e.g., `src/handlers/my_handler.cc`).
+
 ```
 #ifndef MY_HANDLER_H
 #define MY_HANDLER_H
@@ -81,7 +90,7 @@ private:
     // Handler configuration parameters
     std::string param1_;
     std::string param2_;
-    
+
     // Helper methods
     void helper_method();
 };
@@ -90,15 +99,16 @@ private:
 ```
 
 2. Implement the `handle_request` Method:
-In your `.cc` file (`src/handlers/my_handler.cc`), implement the `handle_request` method. This method contains the core logic for your handler. It receives a `Request` object and must return a `Response` object. You will use the methods provided by the `Request` class to get information about the incoming request (method, URI, headers, body) and the methods of the `Response` class to set the status, headers, and body of the response.\
-Refer to the StaticFileHandler::handle_request implementation below for an example of how to access request data, perform logic, and construct a response.
+   In your `.cc` file (`src/handlers/my_handler.cc`), implement the `handle_request` method. This method contains the core logic for your handler. It receives a `Request` object and must return a `Response` object. You will use the methods provided by the `Request` class to get information about the incoming request (method, URI, headers, body) and the methods of the `Response` class to set the status, headers, and body of the response.\
+   Refer to the StaticFileHandler::handle_request implementation below for an example of how to access request data, perform logic, and construct a response.
 
 3. Implement the Static Create Factory Method:
-Implement the static `Create` method in your `.cc` file. This method is responsible for parsing the string arguments provided from the configuration file and using them to construct an instance of your handler. It should perform necessary validation on the arguments and return a `std::unique_ptr<RequestHandler>` containing the newly created handler instance. If the arguments are invalid, it should throw a `std::invalid_argument exception`.\
-Refer to the `StaticFileHandler::Create` implementation below for an example of validating the number and content of arguments before creating the handler object.
+   Implement the static `Create` method in your `.cc` file. This method is responsible for parsing the string arguments provided from the configuration file and using them to construct an instance of your handler. It should perform necessary validation on the arguments and return a `std::unique_ptr<RequestHandler>` containing the newly created handler instance. If the arguments are invalid, it should throw a `std::invalid_argument exception`.\
+   Refer to the `StaticFileHandler::Create` implementation below for an example of validating the number and content of arguments before creating the handler object.
 
 4. Register the Handler:
-In your handler's .cc file (src/handlers/my_handler.cc), add a static registration call outside of any function. This uses a static initializer to register your handler's Create function with the central HandlerRegistry under a specific string name. This is how the server knows about your handler type and can create instances based on the configuration file.
+   In your handler's .cc file (src/handlers/my_handler.cc), add a static registration call outside of any function. This uses a static initializer to register your handler's Create function with the central HandlerRegistry under a specific string name. This is how the server knows about your handler type and can create instances based on the configuration file.
+
 ```
 #include "handler_registry.h"
 // ...
@@ -108,12 +118,15 @@ namespace {
     const bool my_handler_registered = HandlerRegistry::RegisterHandler("MyHandlerName", MyHandler::Create);
 }
 ```
+
 5. Update `CMakeLists.txt`: Edit the main `CMakeLists.txt` file at the project root. Find the add_library(handlers_lib ...) command and add your new handler source file (`src/handlers/my_handler.cc`) to the list of source files for this library.
 
 6. Configure the Server: Edit the server configuration file (`config/server_config.conf` or your custom file). In the section defining the handlers for a specific port, add an entry that maps a URL path prefix to your new handler, using the string name you registered in step 4 ("MyHandlerName") and providing the necessary string arguments that your handler's Create method expects.
 
 ### Example: Static File Handler
+
 This handler serves static files from a configured root directory, mapping parts of the request URI to file paths. It includes path sanitization to prevent directory traversal attacks.
+
 ```
 #include "handlers/static_file_handler.h"
 #include "handler_registry.h"
@@ -164,7 +177,7 @@ std::unique_ptr<Response> StaticFileHandler::handle_request(const Request& req) 
     } else {
         relative_path = request_uri.substr(serving_path_.length() + 1);
     }
-    
+
     if (relative_path.empty() || relative_path.back() == '/') {
         relative_path += "index.html";
     }
@@ -182,7 +195,7 @@ std::unique_ptr<Response> StaticFileHandler::handle_request(const Request& req) 
         response->set_body("<html><body><h1>403 Forbidden</h1><p>Requested resource is outside the allowed directory.</p></body></html>");
         return response;
     }
-    
+
     std::ifstream file(full_file_path.string(), std::ios::binary);
     if (!file) {
         response->set_status(Response::NOT_FOUND);
@@ -215,7 +228,7 @@ std::unique_ptr<RequestHandler> StaticFileHandler::Create(const std::vector<std:
     if (args.size() != 2) {
         throw std::invalid_argument("StaticFileHandler factory requires 2 arguments: serving_path and root_directory. Got " + std::to_string(args.size()));
     }
-    
+
     // Check for empty arguments
     if (args[0].empty()) {
         throw std::invalid_argument("StaticFileHandler serving_path cannot be empty");
@@ -223,16 +236,19 @@ std::unique_ptr<RequestHandler> StaticFileHandler::Create(const std::vector<std:
     if (args[1].empty()) {
         throw std::invalid_argument("StaticFileHandler root_directory cannot be empty");
     }
-    
+
     return std::make_unique<StaticFileHandler>(args[0], args[1]);
 }
 
 namespace {
     const bool static_file_handler_registered = HandlerRegistry::RegisterHandler("StaticHandler", StaticFileHandler::Create);
-} 
+}
 ```
+
 ### Docker
+
 Running docker images
+
 ```
 # Build using the provided Docker files
 docker build -f docker/base.Dockerfile -t i-am-steve:base .
@@ -243,6 +259,7 @@ docker run -p 8080:8080 -v /path/to/config:/app/config i-am-steve:latest
 ```
 
 Submitting docker configuration to cloud
+
 ```
 gcloud builds submit --config docker/cloudbuild.yaml
 ```

@@ -1,10 +1,12 @@
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+
 cmake_minimum_required(VERSION 3.10.0)
 project(i-am-steve)
 
 include_directories(${CMAKE_SOURCE_DIR}/src)
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
-# Set the C++ standard to C++14
+# Set the C++ standard to C++17
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -32,17 +34,20 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 include(CTest)
 enable_testing()
 
-# Boost settings
+# Find required packages
 set(Boost_USE_STATIC_LIBS ON)
 find_package(Boost 1.50 REQUIRED COMPONENTS system log log_setup date_time)
 message(STATUS "Boost version: ${Boost_VERSION}")
+
+# Find threads package for multithreading
+find_package(Threads REQUIRED)
 
 # Project source files
 
 # Server executable
 add_executable(server src/main.cc)
 target_include_directories(server PUBLIC ${CMAKE_SOURCE_DIR}/include)
-target_link_libraries(server server_lib handler_registry_lib logger_lib)
+target_link_libraries(server server_lib handler_registry_lib logger_lib Threads::Threads)
 
 # Basic libraries (no interdependencies)
 add_library(logger_lib src/logger.cc)
@@ -73,12 +78,13 @@ target_include_directories(fake_file_system_lib PUBLIC ${CMAKE_SOURCE_DIR}/inclu
 add_library(handler_registry_lib src/handler_registry.cc)
 target_include_directories(handler_registry_lib PUBLIC ${CMAKE_SOURCE_DIR}/include)
 
-# Handlers library
+# Handlers library (including new health handler)
 add_library(handlers_lib 
             src/handlers/echo_handler.cc 
             src/handlers/static_file_handler.cc
             src/handlers/not_found_handler.cc
-            src/handlers/api_handler.cc)
+            src/handlers/api_handler.cc
+            src/handlers/health_handler.cc)
 target_include_directories(handlers_lib PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(handlers_lib mime_types_lib request_lib response_lib handler_registry_lib file_system_lib fake_file_system_lib)
 
@@ -87,7 +93,7 @@ add_library(handler_dispatcher_lib src/handler_dispatcher.cc)
 target_include_directories(handler_dispatcher_lib PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(handler_dispatcher_lib handler_registry_lib)
 
-# Server config library
+# Server config library  
 add_library(server_config_lib src/server_config.cc)
 target_include_directories(server_config_lib PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(server_config_lib handlers_lib config_parser)
@@ -97,7 +103,7 @@ add_library(handler_server_lib src/handler_server.cc)
 target_include_directories(handler_server_lib PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(handler_server_lib handler_dispatcher_lib logger_lib)
 
-# Session library
+# Session library (enhanced with 400 error handling)
 add_library(session_lib src/session.cc)
 target_include_directories(session_lib PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(session_lib request_lib response_lib handler_dispatcher_lib Boost::log Boost::log_setup Boost::date_time pthread)
@@ -115,14 +121,28 @@ target_link_libraries(config_parser_main config_parser)
 # GoogleTest and test setup (excluded in Docker build)
 include(GoogleTest)
 if(NOT DOCKER_BUILD)
-  include(GoogleTest)
+ include(GoogleTest)
   add_subdirectory(/usr/src/googletest googletest)
-
+ 
 
   add_executable(config_parser_test tests/config_parser_test.cc)
   target_link_libraries(config_parser_test config_parser gtest_main)
   gtest_discover_tests(config_parser_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
 endif()
+
+
+# GoogleTest and test setup using Homebrew-installed GTest
+#-----David: This is the correct way to include GTest in a Homebrew environment-----
+#include(GoogleTest)
+#find_package(GTest REQUIRED)
+#include_directories(${GTEST_INCLUDE_DIRS})
+
+#if(NOT DOCKER_BUILD)
+#  add_executable(config_parser_test tests/config_parser_test.cc)
+#  target_link_libraries(config_parser_test config_parser GTest::gtest_main)
+#  gtest_discover_tests(config_parser_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+#endif()
+#----------- you can remove the above lines if you don't need to use Homebrew GTest ----------------
 
 # server_test
 add_executable(server_test tests/server_test.cc)
@@ -141,6 +161,10 @@ target_link_libraries(echo_handler_test gtest_main gmock_main handlers_lib reque
 target_link_libraries(static_file_handler_test gtest_main gmock_main mime_types_lib handlers_lib request_lib response_lib handler_registry_lib)
 target_link_libraries(handler_registry_test gtest_main gmock_main handler_registry_lib handlers_lib)
 target_link_libraries(api_handler_test gtest_main gmock_main mime_types_lib handlers_lib request_lib response_lib handler_registry_lib)
+
+# Health handler test
+add_executable(health_handler_test tests/health_handler_test.cc)
+target_link_libraries(health_handler_test gtest_main gmock_main handlers_lib request_lib response_lib handler_registry_lib)
 
 # New tests for request, response, and mime_types
 add_executable(request_test tests/request_test.cc)
@@ -186,6 +210,7 @@ gtest_discover_tests(server_config_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE
 gtest_discover_tests(handler_server_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
 gtest_discover_tests(handler_dispatcher_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
 gtest_discover_tests(api_handler_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+gtest_discover_tests(health_handler_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
 
 # Integration test
 add_custom_target(integration_test
@@ -228,6 +253,11 @@ generate_coverage_report(
     handler_dispatcher_test
     logger_test
     logger_rotation_test
+    health_handler_test
 )
 
 add_test(NAME IntegrationTest COMMAND bash ../tests/test_integration.sh)
+# Concurrency test
+add_executable(concurrency_test tests/concurrency_test.cc)   
+target_link_libraries(concurrency_test GTest::gtest_main)
+gtest_discover_tests(concurrency_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)

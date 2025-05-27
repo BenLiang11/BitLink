@@ -4,6 +4,25 @@
 #include "logger.h"
 #include <boost/log/trivial.hpp>
 
+bool isValidHttpRequest(const std::string& request_data) {
+    if (request_data.empty()) return false;
+    
+    // Check for basic HTTP request format
+    if (request_data.find("HTTP/") == std::string::npos) return false;
+    
+    // Check for proper line endings
+    if (request_data.find("\r\n") == std::string::npos && 
+        request_data.find("\n") == std::string::npos) return false;
+    
+    // Check starts with valid method
+    if (request_data.find("GET ") != 0 && 
+        request_data.find("POST ") != 0 && 
+        request_data.find("PUT ") != 0 && 
+        request_data.find("DELETE ") != 0) return false;
+    
+    return true;
+}
+
 // Constructor for socket
 session::session(boost::asio::io_context& io_context, const HandlerDispatcher& handler_dispatcher)
     : socket_(io_context),
@@ -39,6 +58,20 @@ void session::handle_read(const boost::system::error_code& error,
   if (!error)
   {
     request_data.assign(data_, bytes_transferred);
+
+    // Add validation here
+    if (!isValidHttpRequest(request_data)) {
+        // Send 400 response
+        auto response = std::make_unique<Response>();
+        response->set_status(Response::BAD_REQUEST);
+        response->set_header("Content-Type", "application/json");
+        response->set_body("{\"error\": \"Bad Request\", \"message\": \"Malformed HTTP request\"}");
+        
+        std::string response_str = response->to_string();
+        boost::asio::async_write(socket_, boost::asio::buffer(response_str),
+            boost::bind(&session::handle_write, this, boost::asio::placeholders::error));
+        return;
+    }
 
     BOOST_LOG_TRIVIAL(info) << "Received request: " << request_data;
 
