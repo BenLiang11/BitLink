@@ -74,11 +74,10 @@ void session::handle_read(const boost::system::error_code& error,
     std::unique_ptr<RequestHandler> handler = handler_dispatcher_.CreateHandlerForRequest(request);
     // Create a Response object
     std::unique_ptr<Response> response;
-    BOOST_LOG_TRIVIAL(info) << "Handling request: " << request.uri();
+    
     // Handle the request using the appropriate handler
     if (handler) {
       response = handler->handle_request(request);
-      BOOST_LOG_TRIVIAL(info) << "Successfully handled request: " << request.uri();
     } else {
       // 404 if no handler is available
       response = std::make_unique<Response>();
@@ -86,7 +85,6 @@ void session::handle_read(const boost::system::error_code& error,
       response->set_header("Content-Type", "text/html");
       response->set_body("<html><body><h1>404 Not Found</h1><p>The requested file could not be found.</p></body></html>");
       response->set_header("Connection", "close");
-      BOOST_LOG_TRIVIAL(info) << "Unsuccessfully handled request --> 404 Response:  " << request.uri();
     }
      // Log the response metrics
     BOOST_LOG_TRIVIAL(info)
@@ -102,7 +100,7 @@ void session::handle_read(const boost::system::error_code& error,
 
     // Convert the response to a string
     std::string response_str = response->to_string();
-    BOOST_LOG_TRIVIAL(info) << "Sending response: " << response_str;
+    
     // Write the response
     boost::asio::async_write(socket_,
         boost::asio::buffer(response_str),
