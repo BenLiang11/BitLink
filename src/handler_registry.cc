@@ -21,7 +21,11 @@ bool HandlerRegistry::RegisterHandler(const std::string& name, HandlerFactory fa
         
         // For test reproducibility, just allow "EchoHandler" and "StaticHandler" 
         // to be re-registered (since many tests depend on this)
-        if (name == "EchoHandler" || name == "StaticHandler" || name == "NotFoundHandler" || name == "ApiHandler") {
+        if (name == "EchoHandler"
+             || name == "StaticHandler"
+             || name == "NotFoundHandler"
+             || name == "ApiHandler"
+             || name == "HealthHandler") {
             map[name] = factory;
             return true;
         }
