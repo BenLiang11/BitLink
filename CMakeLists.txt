@@ -69,13 +69,13 @@ target_include_directories(fake_file_system_lib PUBLIC ${CMAKE_SOURCE_DIR}/inclu
 add_library(handler_registry_lib src/handler_registry.cc)
 target_include_directories(handler_registry_lib PUBLIC ${CMAKE_SOURCE_DIR}/include)
 
-# Handlers library (✔ includes health_handler and sleep_handler for health check and concurrency testing)
+# Handlers library (✔ includes health_handler and sleep_handler for health check)
 add_library(handlers_lib 
             src/handlers/echo_handler.cc 
             src/handlers/static_file_handler.cc
             src/handlers/not_found_handler.cc
             src/handlers/api_handler.cc
-            src/handlers/health_handler.cc     # ✔ /health endpoint
+            src/handlers/health_handler.cc
             )
 
 target_include_directories(handlers_lib PUBLIC ${CMAKE_SOURCE_DIR}/include)
@@ -159,11 +159,9 @@ target_link_libraries(handler_server_test handler_server_lib server_lib session_
 add_executable(handler_dispatcher_test tests/handler_dispatcher_test.cc)
 target_link_libraries(handler_dispatcher_test handler_dispatcher_lib handlers_lib request_lib GTest::gtest_main GTest::gmock_main)
 
-add_executable(health_handler_test tests/health_handler_test.cc)     # ✔ Unit test for /health
-add_executable(concurrency_test tests/concurrency_test.cc)           # ✔ Concurrent curl test
+add_executable(health_handler_test tests/health_handler_test.cc)
 
 target_link_libraries(health_handler_test handlers_lib request_lib response_lib GTest::gtest_main GTest::gmock_main)
-target_link_libraries(concurrency_test GTest::gtest_main GTest::gmock_main)
 
 # Discover all tests for CTest
 gtest_discover_tests(server_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
@@ -181,7 +179,6 @@ gtest_discover_tests(handler_server_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURC
 gtest_discover_tests(handler_dispatcher_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
 gtest_discover_tests(api_handler_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
 gtest_discover_tests(health_handler_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
-gtest_discover_tests(concurrency_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
 
 # Integration test script
 add_custom_target(integration_test
@@ -224,8 +221,12 @@ generate_coverage_report(
     handler_dispatcher_test
     logger_test
     logger_rotation_test
-    health_handler_test     # ✔ included in coverage
-    concurrency_test        # ✔ included in coverage
+    health_handler_test
 )
 
 add_test(NAME IntegrationTest COMMAND bash ../tests/test_integration.sh)
+
+add_test(
+  NAME ConcurrencyTest
+  COMMAND bash ../tests/concurrency_test.sh
+)

@@ -136,10 +136,10 @@ run_tests() {
     local updated_get_response=$(curl -s -X GET --connect-timeout $REQUEST_TIMEOUT "http://${SERVER_HOST}:${SERVER_PORT}/api/products/$product_id")
     
     if [[ "$updated_get_response" == *"Updated Product"* && "$updated_get_response" == *"29.99"* ]]; then
-        echo "✓ API handler PUT test passed"
+        echo "API handler PUT test passed"
         ((test_success++))
     else
-        echo "✗ API handler PUT test failed"
+        echo "API handler PUT test failed"
         ((test_failed++))
     fi
     
@@ -151,10 +151,10 @@ run_tests() {
     local deleted_get_response=$(curl -s -I -X GET --connect-timeout $REQUEST_TIMEOUT "http://${SERVER_HOST}:${SERVER_PORT}/api/products/$product_id" | head -n 1)
     
     if [[ "$deleted_get_response" == *"404"* ]]; then
-        echo "✓ API handler DELETE test passed"
+        echo "API handler DELETE test passed"
         ((test_success++))
     else
-        echo "✗ API handler DELETE test failed"
+        echo "API handler DELETE test failed"
         ((test_failed++))
     fi
     
