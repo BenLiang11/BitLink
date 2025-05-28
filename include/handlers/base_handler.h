@@ -27,6 +27,12 @@ public:
      * @return A unique_ptr to the response object.
      */
     virtual std::unique_ptr<Response> handle_request(const Request& req) = 0;
+
+    
+    virtual std::string name() const {
+        return "UnnamedHandler";
+    }
+    
 };
 
 #endif // BASE_HANDLER_H

@@ -1,31 +1,31 @@
 cmake_minimum_required(VERSION 3.10.0)
 project(i-am-steve)
-
 include_directories(${CMAKE_SOURCE_DIR}/src)
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
-# Set the C++ standard to C++14
+# GoogleTest with Homebrew
+find_package(GTest REQUIRED)
+include_directories(${GTEST_INCLUDE_DIRS})
+
+# Set the C++ standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# boost
+# Boost include and lib dirs
 include_directories(/opt/homebrew/include) 
 link_directories(/opt/homebrew/lib)
 
 # Prevent in-source builds to avoid clutter
 if (${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
-    message(FATAL_ERROR "In-source builds are not allowed.
-    Please create a separate build directory and run CMake from there.
-    You may need to remove CMakeCache.txt.")
+    message(FATAL_ERROR "In-source builds are not allowed.")
 endif()
 
 # Enable debug mode by default when building inside a dev shell
 if (CMAKE_BUILD_TYPE STREQUAL "" AND "$ENV{DEVEL_SHELL}" STREQUAL "1")
-    message(STATUS "Setting debug build type by default in development shell")
     set(CMAKE_BUILD_TYPE Debug)
 endif()
 
-# Output compiled binaries to a bin directory
+# Output compiled binaries to bin/
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 # Enable CMake testing
@@ -36,8 +36,6 @@ enable_testing()
 set(Boost_USE_STATIC_LIBS ON)
 find_package(Boost 1.50 REQUIRED COMPONENTS system log log_setup date_time)
 message(STATUS "Boost version: ${Boost_VERSION}")
-
-# Project source files
 
 # Server executable
 add_executable(server src/main.cc)
@@ -61,24 +59,25 @@ target_include_directories(response_lib PUBLIC ${CMAKE_SOURCE_DIR}/include)
 add_library(mime_types_lib src/mime_types.cc)
 target_include_directories(mime_types_lib PUBLIC ${CMAKE_SOURCE_DIR}/include)
 
-add_library(file_system_lib 
-            src/real_file_system.cc)
+add_library(file_system_lib src/real_file_system.cc)
 target_include_directories(file_system_lib PUBLIC ${CMAKE_SOURCE_DIR}/include)
 
-add_library(fake_file_system_lib 
-            src/fake_file_system.cc)
+add_library(fake_file_system_lib src/fake_file_system.cc)
 target_include_directories(fake_file_system_lib PUBLIC ${CMAKE_SOURCE_DIR}/include)
 
 # Registry library
 add_library(handler_registry_lib src/handler_registry.cc)
 target_include_directories(handler_registry_lib PUBLIC ${CMAKE_SOURCE_DIR}/include)
 
-# Handlers library
+# Handlers library (✔ includes health_handler and sleep_handler for health check and concurrency testing)
 add_library(handlers_lib 
             src/handlers/echo_handler.cc 
             src/handlers/static_file_handler.cc
             src/handlers/not_found_handler.cc
-            src/handlers/api_handler.cc)
+            src/handlers/api_handler.cc
+            src/handlers/health_handler.cc     # ✔ /health endpoint
+            )
+
 target_include_directories(handlers_lib PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(handlers_lib mime_types_lib request_lib response_lib handler_registry_lib file_system_lib fake_file_system_lib)
 
@@ -112,66 +111,61 @@ add_executable(config_parser_main src/config_parser_main.cc)
 target_include_directories(config_parser_main PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(config_parser_main config_parser)
 
-# GoogleTest and test setup (excluded in Docker build)
+# GoogleTest and test setup
 include(GoogleTest)
 if(NOT DOCKER_BUILD)
   include(GoogleTest)
-  add_subdirectory(/usr/src/googletest googletest)
+  #add_subdirectory(/usr/src/googletest googletest)
 
+add_executable(config_parser_test tests/config_parser_test.cc)
+target_link_libraries(config_parser_test config_parser GTest::gtest_main)
+gtest_discover_tests(config_parser_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
 
-  add_executable(config_parser_test tests/config_parser_test.cc)
-  target_link_libraries(config_parser_test config_parser gtest_main)
-  gtest_discover_tests(config_parser_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
 endif()
-
-# server_test
+# Additional unit tests
 add_executable(server_test tests/server_test.cc)
-target_link_libraries(server_test server_lib gtest_main gmock_main)
+target_link_libraries(server_test server_lib GTest::gtest_main GTest::gmock_main)
 
-# session_test
 add_executable(session_test tests/session_test.cc)
-target_link_libraries(session_test session_lib gtest_main gmock_main)
+target_link_libraries(session_test session_lib GTest::gtest_main GTest::gmock_main)
 
-# handler_tests
 add_executable(echo_handler_test tests/echo_handler_test.cc)
 add_executable(static_file_handler_test tests/static_file_handler_test.cc)
 add_executable(handler_registry_test tests/handler_registry_test.cc)
 add_executable(api_handler_test tests/api_handler_test.cc)
-target_link_libraries(echo_handler_test gtest_main gmock_main handlers_lib request_lib response_lib handler_registry_lib)
-target_link_libraries(static_file_handler_test gtest_main gmock_main mime_types_lib handlers_lib request_lib response_lib handler_registry_lib)
-target_link_libraries(handler_registry_test gtest_main gmock_main handler_registry_lib handlers_lib)
-target_link_libraries(api_handler_test gtest_main gmock_main mime_types_lib handlers_lib request_lib response_lib handler_registry_lib)
+target_link_libraries(echo_handler_test GTest::gtest_main GTest::gmock_main handlers_lib request_lib response_lib handler_registry_lib)
+target_link_libraries(static_file_handler_test GTest::gtest_main GTest::gmock_main mime_types_lib handlers_lib request_lib response_lib handler_registry_lib)
+target_link_libraries(handler_registry_test GTest::gtest_main GTest::gmock_main handler_registry_lib handlers_lib)
+target_link_libraries(api_handler_test GTest::gtest_main GTest::gmock_main mime_types_lib handlers_lib request_lib response_lib handler_registry_lib)
 
-# New tests for request, response, and mime_types
 add_executable(request_test tests/request_test.cc)
-target_link_libraries(request_test request_lib gtest_main gmock_main)
-
+target_link_libraries(request_test request_lib GTest::gtest_main GTest::gmock_main)
 add_executable(response_test tests/response_test.cc)
-target_link_libraries(response_test response_lib gtest_main gmock_main)
-
+target_link_libraries(response_test response_lib GTest::gtest_main GTest::gmock_main)
 add_executable(mime_types_test tests/mime_types_test.cc)
-target_link_libraries(mime_types_test mime_types_lib gtest_main gmock_main)
+target_link_libraries(mime_types_test mime_types_lib GTest::gtest_main GTest::gmock_main)
 
-# logger_tests
 add_executable(logger_test tests/logger_test.cc)
-target_link_libraries(logger_test logger_lib gtest_main gmock_main)
-
+target_link_libraries(logger_test logger_lib GTest::gtest_main GTest::gmock_main)
 add_executable(logger_rotation_test tests/logger_rotation_test.cc)
-target_link_libraries(logger_rotation_test logger_lib gtest_main gmock_main Boost::date_time)
+target_link_libraries(logger_rotation_test logger_lib GTest::gtest_main GTest::gmock_main Boost::date_time)
 
-# server configuration tests
 add_executable(server_config_test tests/server_config_test.cc)
-target_link_libraries(server_config_test server_config_lib gtest_main gmock_main)
+target_link_libraries(server_config_test server_config_lib GTest::gtest_main GTest::gmock_main)
 
-# handler_server tests
 add_executable(handler_server_test tests/handler_server_test.cc)
-target_link_libraries(handler_server_test handler_server_lib server_lib session_lib gtest_main gmock_main)
+target_link_libraries(handler_server_test handler_server_lib server_lib session_lib GTest::gtest_main GTest::gmock_main)
 
-# handler_dispatcher tests
 add_executable(handler_dispatcher_test tests/handler_dispatcher_test.cc)
-target_link_libraries(handler_dispatcher_test handler_dispatcher_lib handlers_lib request_lib gtest_main gmock_main)
+target_link_libraries(handler_dispatcher_test handler_dispatcher_lib handlers_lib request_lib GTest::gtest_main GTest::gmock_main)
 
-# gtests
+add_executable(health_handler_test tests/health_handler_test.cc)     # ✔ Unit test for /health
+add_executable(concurrency_test tests/concurrency_test.cc)           # ✔ Concurrent curl test
+
+target_link_libraries(health_handler_test handlers_lib request_lib response_lib GTest::gtest_main GTest::gmock_main)
+target_link_libraries(concurrency_test GTest::gtest_main GTest::gmock_main)
+
+# Discover all tests for CTest
 gtest_discover_tests(server_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
 gtest_discover_tests(session_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
 gtest_discover_tests(echo_handler_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
@@ -186,8 +180,10 @@ gtest_discover_tests(server_config_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE
 gtest_discover_tests(handler_server_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
 gtest_discover_tests(handler_dispatcher_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
 gtest_discover_tests(api_handler_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+gtest_discover_tests(health_handler_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+gtest_discover_tests(concurrency_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
 
-# Integration test
+# Integration test script
 add_custom_target(integration_test
     COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_integration.sh
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests
@@ -195,7 +191,7 @@ add_custom_target(integration_test
     COMMENT "Running integration tests"
 )
 
-# Code coverage settings (also excluded in Docker)
+# Code coverage settings (excluded in Docker)
 include(cmake/CodeCoverageReportConfig.cmake)
 generate_coverage_report(
   TARGETS
@@ -228,6 +224,8 @@ generate_coverage_report(
     handler_dispatcher_test
     logger_test
     logger_rotation_test
+    health_handler_test     # ✔ included in coverage
+    concurrency_test        # ✔ included in coverage
 )
 
 add_test(NAME IntegrationTest COMMAND bash ../tests/test_integration.sh)

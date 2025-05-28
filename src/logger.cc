@@ -6,6 +6,8 @@
 #include <boost/log/utility/setup/common_attributes.hpp>
 #include <boost/log/utility/setup/file.hpp>
 #include <boost/log/core.hpp>
+#include <filesystem>
+#include <iostream>
 
 namespace logging = boost::log;
 namespace expr = boost::log::expressions;
@@ -16,10 +18,16 @@ void init_logging() {
     if (initialized) return;
     initialized = true;
 
+    try {
+        std::filesystem::create_directories("logs");
+    } catch (std::exception& e) {
+        std::cerr << "Warning: failed to create log directory: " << e.what() << std::endl;
+    }
+
     logging::add_common_attributes();
 
     logging::add_file_log(
-        keywords::file_name = "logs/server.log",        
+        keywords::file_name = "logs/server.log",
         keywords::open_mode = std::ios_base::app,
         keywords::format = (
             expr::stream
@@ -27,10 +35,25 @@ void init_logging() {
                 << "] [Thread " << expr::attr<boost::log::attributes::current_thread_id::value_type>("ThreadID")
                 << "] [" << logging::trivial::severity
                 << "] " << expr::smessage
-        )
+        ),
+        keywords::auto_flush = true 
     );
-    
-    // Add console logging to stdout with the same format
+
+    logging::add_file_log(
+        keywords::file_name = "logs/server.json",
+        keywords::open_mode = std::ios_base::app,
+        keywords::format = (
+            expr::stream
+                << "{"
+                << "\"timestamp\":\"" << expr::format_date_time<boost::posix_time::ptime>("TimeStamp", "%Y-%m-%dT%H:%M:%S.%fZ") << "\","
+                << "\"thread\":\"" << expr::attr<boost::log::attributes::current_thread_id::value_type>("ThreadID") << "\","
+                << "\"level\":\"" << logging::trivial::severity << "\","
+                << "\"message\":" << "\"" << expr::smessage << "\""
+                << "}"
+        ),
+        keywords::auto_flush = true
+    );
+
     logging::add_console_log(
         std::cout,
         keywords::format = (
