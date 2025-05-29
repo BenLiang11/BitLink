@@ -72,6 +72,11 @@ std::map<std::string, HandlerRegistration> ServerConfig::CreateHandlerRegistrati
                 reg.args = {}; // NotFoundHandler takes no args
                 std::cout << "Added NotFoundHandler registration for path: " << location_path << std::endl;
             }
+            else if (location.handler_type == HEALTH_HANDLER_NAME) {
+                reg.handler_name = HEALTH_HANDLER_NAME;
+                reg.args = {}; // HealthHandler takes no args
+                std::cout << "Added " + HEALTH_HANDLER_NAME + " registration for path: " << location_path << std::endl;
+            }
             else if (location.handler_type == API_HANDLER_NAME) {
                 reg.handler_name = API_HANDLER_NAME;
                 reg.args = TypedArgsToStringVectorForApiHandler(location_path, location.args);

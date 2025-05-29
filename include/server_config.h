@@ -133,6 +133,7 @@ private:
     const std::string STATIC_FILE_HANDLER_NAME = "StaticHandler";
     const std::string NOT_FOUND_HANDLER_NAME = "NotFoundHandler";
     const std::string API_HANDLER_NAME = "ApiHandler";
+    const std::string HEALTH_HANDLER_NAME = "HealthHandler";
 };
 
 #endif // SERVER_CONFIG_H 
