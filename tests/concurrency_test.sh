@@ -3,7 +3,7 @@ set -euo pipefail
 
 # Integration test script for concurrency tests
 
-PORT=80
+PORT=8080 # Default Port so choose any empty port for testing
 SERVER_BIN="./bin/server"
 CFG_FILE="../config/server_config.conf"
 SLEEP_PATH="/sleep?dur=2000"
