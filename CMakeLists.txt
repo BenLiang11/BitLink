@@ -192,9 +192,17 @@ add_library(handlers_lib
             )
 
 target_include_directories(handlers_lib PUBLIC ${CMAKE_SOURCE_DIR}/include)
-target_link_libraries(handlers_lib mime_types_lib request_lib 
-                      response_lib handler_registry_lib file_system_lib 
+target_link_libraries(handlers_lib 
+                      mime_types_lib
+                      request_lib 
+                      response_lib
+                      handler_registry_lib
+                      file_system_lib 
                       fake_file_system_lib
+                      url_shortening_service_lib
+                      file_upload_service_lib
+                      http_parser_lib
+                      json_builder_lib
                       qrencode_static
                       sqlite3_static
                     )
