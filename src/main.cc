@@ -22,6 +22,7 @@
 #include "handlers/api_handler.h"
 #include "handlers/health_handler.h"
 #include "handlers/sleep_handler.h"
+#include "handlers/url_shortener_handler.h"
 
 // Global variables for graceful shutdown
 std::unique_ptr<boost::asio::io_context> global_io_context = nullptr;
@@ -63,6 +64,7 @@ int main(int argc, char* argv[]) {
         assert(HandlerRegistry::RegisterHandler("NotFoundHandler", NotFoundHandler::Create));
         assert(HandlerRegistry::RegisterHandler("ApiHandler", ApiHandler::Create));
         assert(HandlerRegistry::RegisterHandler("HealthHandler", HealthHandler::Create));
+        assert(HandlerRegistry::RegisterHandler("URLShortenerHandler", URLShortenerHandler::Create));
         assert(HandlerRegistry::RegisterHandler("SleepHandler", SleepHandler::Create));
         // Create handler registrations based on configuration
         auto handler_registrations = server_config.CreateHandlerRegistrations();

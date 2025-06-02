@@ -185,6 +185,7 @@ add_library(handlers_lib
             src/handlers/not_found_handler.cc
             src/handlers/api_handler.cc
             src/handlers/health_handler.cc
+            src/handlers/url_shortener_handler.cc
             # Database implementation
             src/database/sqlite_database.cc
             # Models
@@ -286,6 +287,9 @@ target_link_libraries(url_shortening_service_test url_shortening_service_lib han
 add_executable(file_upload_service_test tests/file_upload_service_test.cc)
 target_link_libraries(file_upload_service_test file_upload_service_lib handlers_lib GTest::gtest_main GTest::gmock_main)
 
+add_executable(url_shortener_handler_test tests/url_shortener_handler_test.cc)
+target_link_libraries(url_shortener_handler_test handlers_lib request_lib response_lib handler_registry_lib GTest::gtest_main GTest::gmock_main)
+
 add_executable(echo_handler_test tests/echo_handler_test.cc)
 add_executable(static_file_handler_test tests/static_file_handler_test.cc)
 add_executable(handler_registry_test tests/handler_registry_test.cc)
@@ -333,6 +337,7 @@ gtest_discover_tests(http_parser_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_D
 gtest_discover_tests(json_builder_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
 gtest_discover_tests(url_shortening_service_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
 gtest_discover_tests(file_upload_service_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+gtest_discover_tests(url_shortener_handler_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
 gtest_discover_tests(echo_handler_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
 gtest_discover_tests(static_file_handler_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
 gtest_discover_tests(handler_registry_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
@@ -394,6 +399,7 @@ generate_coverage_report(
     json_builder_test
     url_shortening_service_test
     file_upload_service_test
+    url_shortener_handler_test
     request_test
     response_test
     mime_types_test
@@ -411,7 +417,7 @@ generate_coverage_report(
 
 add_test(NAME IntegrationTest COMMAND bash ../tests/test_integration.sh)
 
-# add_test(
-#   NAME ConcurrencyTest
-#   COMMAND bash ../tests/concurrency_test.sh
-# )
+add_test(
+  NAME ConcurrencyTest
+  COMMAND bash ../tests/concurrency_test.sh
+)

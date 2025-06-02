@@ -7,6 +7,9 @@
 #include <sstream>
 #include "common_exceptions.h"
 
+// Add handler name constant
+#define URL_SHORTENER_HANDLER_NAME "URLShortenerHandler"
+
 //Parse provided NginxConfig object and update server configuration data
 bool ServerConfig::ParseConfig(const NginxConfig& config) {
     std::cout << "Parsing server configuration..." << std::endl;
@@ -83,6 +86,11 @@ std::map<std::string, HandlerRegistration> ServerConfig::CreateHandlerRegistrati
                 std::cout << "Added "+API_HANDLER_NAME+" registration for path: " << location_path << std::endl;
 
             }
+            else if (location.handler_type == URL_SHORTENER_HANDLER_NAME) {
+                reg.handler_name = URL_SHORTENER_HANDLER_NAME;
+                reg.args = TypedArgsToStringVectorForURLShortenerHandler(location_path, location.args);
+                std::cout << "Added " << URL_SHORTENER_HANDLER_NAME << " registration for path: " << location_path << std::endl;
+            }
             else {
                 std::cerr << "Warning: Unknown handler type '" << location.handler_type 
                           << "' for path: " << location_path << ". Skipping." << std::endl;
@@ -157,6 +165,63 @@ std::vector<std::string> ServerConfig::TypedArgsToStringVectorForApiHandler(
     return args;
 }
 
+// Convert typed arguments to string vector for URLShortenerHandler
+std::vector<std::string> ServerConfig::TypedArgsToStringVectorForURLShortenerHandler(
+    const std::string& location_path, 
+    const std::map<std::string, TypedValue>& typed_args) const {
+    
+    std::vector<std::string> args;
+    
+    // URLShortenerHandler requires: serving_path, upload_dir, db_path, base_url
+    args.push_back(location_path); // serving_path
+    
+    // upload_dir
+    if (typed_args.find("upload_dir") != typed_args.end()) {
+        const auto& value = typed_args.at("upload_dir");
+        if (std::holds_alternative<std::string>(value)) {
+            args.push_back(std::get<std::string>(value));
+        } else {
+            std::cerr << "Warning: upload_dir value for path " << location_path << " is not a string" << std::endl;
+            args.push_back("./data/uploads"); // Default
+        }
+    } else {
+        std::cerr << "Warning: no upload_dir specified for URLShortenerHandler at " 
+                 << location_path << std::endl;
+        args.push_back("./data/uploads"); // Default
+    }
+    
+    // db_path
+    if (typed_args.find("db_path") != typed_args.end()) {
+        const auto& value = typed_args.at("db_path");
+        if (std::holds_alternative<std::string>(value)) {
+            args.push_back(std::get<std::string>(value));
+        } else {
+            std::cerr << "Warning: db_path value for path " << location_path << " is not a string" << std::endl;
+            args.push_back("./data/shortener.db"); // Default
+        }
+    } else {
+        std::cerr << "Warning: no db_path specified for URLShortenerHandler at " 
+                 << location_path << std::endl;
+        args.push_back("./data/shortener.db"); // Default
+    }
+    
+    // base_url
+    if (typed_args.find("base_url") != typed_args.end()) {
+        const auto& value = typed_args.at("base_url");
+        if (std::holds_alternative<std::string>(value)) {
+            args.push_back(std::get<std::string>(value));
+        } else {
+            std::cerr << "Warning: base_url value for path " << location_path << " is not a string" << std::endl;
+            args.push_back("http://localhost:8080"); // Default
+        }
+    } else {
+        std::cerr << "Warning: no base_url specified for URLShortenerHandler at " 
+                 << location_path << std::endl;
+        args.push_back("http://localhost:8080"); // Default
+    }
+    
+    return args;
+}
 
 // Parses and validates the port string, returning true if successful
 bool ServerConfig::ParsePortDirective(const std::string& port_str) {
@@ -270,6 +335,13 @@ bool ServerConfig::ParseTypedArguments(const NginxConfig* child_block, std::map<
 
 // Adds a default echo handler for root path if no locations are specified
 void ServerConfig::AddDefaultNotFoundHandler() {
+    // If no locations are specified, add a default not found handler for root path
+    // This is to prevent the server from crashing if no locations are specified
+    for (const auto& location : locations_) {
+        if (location.path == "/") {
+            return;
+        }
+    }
     LocationConfig location;
     location.path = "/";
     location.handler_type = NOT_FOUND_HANDLER_NAME;

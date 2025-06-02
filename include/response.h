@@ -12,10 +12,12 @@ public:
         OK = 200,
         CREATED = 201,
         NO_CONTENT = 204,
+        FOUND = 302,
         BAD_REQUEST = 400,
         UNAUTHORIZED = 401,
         FORBIDDEN = 403,
         NOT_FOUND = 404,
+        METHOD_NOT_ALLOWED = 405,
         INTERNAL_SERVER_ERROR = 500,
         NOT_IMPLEMENTED = 501,
         SERVICE_UNAVAILABLE = 503
@@ -26,7 +28,9 @@ public:
 
     // Set/Get status
     void set_status(StatusCode status) { status_ = status; }
+    void set_status_code(StatusCode status) { status_ = status; }
     StatusCode status() const { return status_; }
+    StatusCode status_code() const { return status_; }
 
     // Set/Get header
     void set_header(const std::string& name, const std::string& value) {

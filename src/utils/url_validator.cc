@@ -138,6 +138,61 @@ URLValidator::ValidationResult URLValidator::validate_and_normalize(const string
         return result;
     }
     
+    // Reject domains that are just words without proper domain structure
+    // A valid domain should have at least one dot (except for special cases like localhost)
+    if (!is_ip_address(domain) && domain != "localhost" && domain.find('.') == string::npos) {
+        result.error_message = "Invalid domain format - missing top-level domain";
+        return result;
+    }
+    
+    // Additional check: if domain has dots, validate each label
+    if (domain.find('.') != string::npos) {
+        // First check if this is an IPv4 address
+        if (is_ip_address(domain)) {
+            // For IPv4 addresses, just validate the IP format (already done below)
+            // Don't apply TLD validation to IP addresses
+        } else {
+            // For regular domains, split by dots and validate each part
+            istringstream domain_stream(domain);
+            string label;
+            string last_label;
+            
+            while (getline(domain_stream, label, '.')) {
+                if (label.empty()) {
+                    result.error_message = "Domain contains empty labels";
+                    return result;
+                }
+                
+                // Each label should not start or end with hyphen
+                if (label[0] == '-' || label.back() == '-') {
+                    result.error_message = "Domain labels cannot start or end with hyphen";
+                    return result;
+                }
+                
+                // Each label should be reasonably sized
+                if (label.length() > 63) {
+                    result.error_message = "Domain label too long";
+                    return result;
+                }
+                
+                last_label = label;
+            }
+            
+            // The last label should be a valid TLD (at least 1 character, all letters)
+            if (last_label.length() < 1) {
+                result.error_message = "Invalid top-level domain";
+                return result;
+            }
+            
+            for (char c : last_label) {
+                if (!isalpha(c)) {
+                    result.error_message = "Top-level domain must contain only letters";
+                    return result;
+                }
+            }
+        }
+    }
+    
     // Validate IPv4 format if it's an IP address
     if (is_ip_address(domain) && domain.find(':') == string::npos) {
         if (!is_valid_ip(domain)) {

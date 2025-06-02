@@ -126,6 +126,9 @@ private:
     std::vector<std::string> TypedArgsToStringVectorForApiHandler(
         const std::string& location_path,
         const std::map<std::string, TypedValue>& typed_args) const;
+    std::vector<std::string> TypedArgsToStringVectorForURLShortenerHandler(
+        const std::string& location_path,
+        const std::map<std::string, TypedValue>& typed_args) const;
     
     int port_;
     std::vector<LocationConfig> locations_;

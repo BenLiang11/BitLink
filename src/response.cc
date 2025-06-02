@@ -28,10 +28,12 @@ std::string Response::status_to_string(StatusCode status) {
         case OK:                     return "200 OK";
         case CREATED:                return "201 Created";
         case NO_CONTENT:             return "204 No Content";
+        case FOUND:                  return "302 Found";
         case BAD_REQUEST:            return "400 Bad Request";
         case UNAUTHORIZED:           return "401 Unauthorized";
         case FORBIDDEN:              return "403 Forbidden";
         case NOT_FOUND:              return "404 Not Found";
+        case METHOD_NOT_ALLOWED:     return "405 Method Not Allowed";
         case INTERNAL_SERVER_ERROR:  return "500 Internal Server Error";
         case NOT_IMPLEMENTED:        return "501 Not Implemented";
         case SERVICE_UNAVAILABLE:    return "503 Service Unavailable";
