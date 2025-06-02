@@ -393,7 +393,19 @@ TEST_F(QRGeneratorTest, NumericData) {
 }
 
 // Test file permissions (read-only directory)
+#if defined(__unix__) || defined(__APPLE__)
+#include <unistd.h>
+#endif
 TEST_F(QRGeneratorTest, ReadOnlyDirectory) {
+    // Skip in CI environments or when running as root (permissions can't be enforced)
+    if (getenv("CI") != nullptr
+    #if defined(__unix__) || defined(__APPLE__)
+            || (geteuid && geteuid() == 0)
+    #endif
+    ) {
+        GTEST_SKIP() << "Skipping permission test in CI or when running as root.";
+    }
+
     string readonly_dir = test_dir_ + "/readonly";
     fs::create_directories(readonly_dir);
     

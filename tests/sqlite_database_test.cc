@@ -402,7 +402,20 @@ TEST_F(SQLiteDatabaseTest, SpecialCharactersHandling) {
     EXPECT_EQ(clicks[0].referrer, special_referrer);
 }
 
+#if defined(__unix__) || defined(__APPLE__)
+#include <unistd.h>
+#endif
+
 TEST_F(SQLiteDatabaseTest, DatabaseFilePermissions) {
+    // SKIP TEST: in CI environments or when running as root
+    if (getenv("CI") != nullptr
+    #if defined(__unix__) || defined(__APPLE__)
+        || (geteuid && geteuid() == 0)
+    #endif
+    ) {
+        GTEST_SKIP() << "Skipping permission test in CI or when running as root.";
+    }
+
     // Create a read-only directory
     string readonly_dir = "/tmp/readonly_test_dir";
     fs::create_directories(readonly_dir);
