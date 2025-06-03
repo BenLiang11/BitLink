@@ -14,7 +14,7 @@ using ::testing::_;
 class HandlerServerTest : public ::testing::Test {
 protected:
   boost::asio::io_context io_context;
-  short port = 8080;
+  short port = 0;
   std::map<std::string, HandlerRegistration> empty_handlers;
   HandlerDispatcher handler_dispatcher{empty_handlers};
 };
