@@ -11,6 +11,14 @@ SERVER_PORT="8080"
 OUTPUT_DIR="./logs"
 REQUEST_TIMEOUT=3  # Timeout for curl requests in seconds
 
+# Kill any existing server running on the test port
+if lsof -i :${SERVER_PORT} >/dev/null 2>&1; then
+    echo "Killing old server running on port ${SERVER_PORT}..."
+    kill -9 $(lsof -t -i :${SERVER_PORT})
+    sleep 1
+fi
+
+
 # Make sure output directory exists
 mkdir -p ${OUTPUT_DIR}
 
