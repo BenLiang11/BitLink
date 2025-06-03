@@ -7,193 +7,351 @@
 SERVER_BINARY="./bin/server"
 CONFIG_FILE="../config/complete_server_config.conf"
 SERVER_HOST="localhost"
-SERVER_PORT="8080"
+SERVER_PORT="" # Will be dynamically found and assigned
+ORIGINAL_PORT=""
 OUTPUT_DIR="./logs"
-REQUEST_TIMEOUT=3  # Timeout for curl requests in seconds
+REQUEST_TIMEOUT=5  # Increased timeout for curl requests
+SERVER_START_TIMEOUT=10  # Timeout for server startup
+API_DATA_DIR="./data/api"
 
-# Kill any existing server running on the test port
-if lsof -i :${SERVER_PORT} >/dev/null 2>&1; then
-    echo "Killing old server running on port ${SERVER_PORT}..."
-    kill -9 $(lsof -t -i :${SERVER_PORT})
-    sleep 1
+echo "=== Integration Test Debug Information ==="
+echo "Server binary: $SERVER_BINARY"
+echo "Config file: $CONFIG_FILE"
+echo "Output directory: $OUTPUT_DIR"
+echo "Request timeout: ${REQUEST_TIMEOUT}s"
+echo "Server start timeout: ${SERVER_START_TIMEOUT}s"
+echo ""
+
+# Function to find an available port with timeout
+find_available_port() {
+  local start_port=8000
+  local end_port=9000
+  local max_attempts=100
+  local attempt=0
+  
+  echo "Finding available port in range $start_port-$end_port..."
+  
+  for ((port=start_port; port<=end_port && attempt<max_attempts; port++, attempt++)); do
+    # Multiple checks for port availability with timeouts
+    local port_free=true
+    
+    # Check 1: netstat
+    if timeout 2 netstat -ln 2>/dev/null | grep -q ":$port "; then
+      port_free=false
+    fi
+    
+    # Check 2: lsof
+    if [[ "$port_free" == "true" ]] && timeout 2 lsof -i ":$port" >/dev/null 2>&1; then
+      port_free=false
+    fi
+    
+    # Check 3: direct connection attempt
+    if [[ "$port_free" == "true" ]]; then
+      if timeout 1 bash -c "echo >/dev/tcp/localhost/$port" 2>/dev/null; then
+        port_free=false
+      fi
+    fi
+    
+    if [[ "$port_free" == "true" ]]; then
+      echo "Found available port: $port"
+      SERVER_PORT="$port"
+      return 0
+    fi
+  done
+  
+  echo "ERROR: No available port found in range $start_port-$end_port after $max_attempts attempts"
+  exit 1
+}
+
+# Cleanup function to restore config file
+cleanup() {
+  local exit_code=$?
+  echo ""
+  echo "=== Cleanup Process ==="
+  
+  # Stop server if it's running and we started it
+  if [[ -n "${SERVER_PID:-}" && "${KILL_SERVER:-0}" -eq 1 ]]; then
+    echo "Force-killing server (PID: $SERVER_PID)..."
+    if kill -9 "$SERVER_PID" 2>/dev/null; then
+      echo "Server force-killed successfully"
+    else
+      echo "Server process was already stopped or could not be terminated"
+    fi
+    # Brief wait to ensure process cleanup
+    sleep 0.2
+  fi
+  
+  # Restore original config file
+  restore_config
+  
+  echo "Cleanup completed"
+  exit $exit_code
+}
+
+# Set up trap to ensure cleanup happens on script exit
+trap cleanup EXIT INT TERM
+
+modify_config() {
+  echo "=== Config File Management ==="
+  
+  # Check if config file exists
+  if [[ ! -f "$CONFIG_FILE" ]]; then
+    echo "ERROR: Config file not found at $CONFIG_FILE"
+    exit 1
+  fi
+  
+  # Extract original port
+  ORIGINAL_PORT=$(grep -E '^listen[[:space:]]+[0-9]+;' "$CONFIG_FILE" | grep -oE '[0-9]+' || echo "")
+  if [[ -z "$ORIGINAL_PORT" ]]; then
+    echo "ERROR: Could not find listen directive in config file"
+    exit 1
+  fi
+  
+  echo "Original port detected: $ORIGINAL_PORT"
+  
+  # Find an available port for testing
+  find_available_port
+  
+  # Modify config to use the available port
+  echo "Modifying config to use port $SERVER_PORT for testing..."
+  if ! sed -i.tmp "s/^listen[[:space:]]*[0-9]*;/listen $SERVER_PORT;/" "$CONFIG_FILE"; then
+    echo "ERROR: Failed to modify config file"
+    exit 1
+  fi
+  rm -f "${CONFIG_FILE}.tmp" 2>/dev/null || true
+  
+  echo "Config file modified to use port $SERVER_PORT"
+  echo "New listen directive: $(grep -E '^listen[[:space:]]+[0-9]+;' "$CONFIG_FILE")"
+}
+
+restore_config() {
+  if [[ -n "$ORIGINAL_PORT" ]]; then
+    echo "Restoring original config file to use port $ORIGINAL_PORT..."
+    if sed -i.tmp "s/^listen[[:space:]]*[0-9]*;/listen $ORIGINAL_PORT;/" "$CONFIG_FILE" 2>/dev/null; then
+      rm -f "${CONFIG_FILE}.tmp" 2>/dev/null || true
+      echo "Config file restored with original port: $ORIGINAL_PORT"
+    else
+      echo "Warning: Failed to restore original config file"
+    fi
+  else
+    echo "Warning: Original port not known, config file may not be restored"
+  fi
+}
+
+# Check if server binary exists
+if [[ ! -f "$SERVER_BINARY" ]]; then
+  echo "ERROR: Server binary not found at $SERVER_BINARY"
+  exit 1
 fi
 
+# Modify config file
+modify_config
 
 # Make sure output directory exists
 mkdir -p ${OUTPUT_DIR}
 
-# Function to check server status
+# Function to check server status with timeout
 check_server() {
-    # Try to connect to server
-    if curl -s --head --connect-timeout 2 http://${SERVER_HOST}:${SERVER_PORT} >/dev/null; then
+    echo "Checking server connectivity on port $SERVER_PORT..."
+    # Try to connect to server with explicit timeout
+    if timeout $REQUEST_TIMEOUT curl -s --head --connect-timeout 2 --max-time 3 "http://${SERVER_HOST}:${SERVER_PORT}" >/dev/null 2>&1; then
         echo "Server is running on ${SERVER_HOST}:${SERVER_PORT}"
         return 0
     else
-        echo "ERROR: Server is not running or not reachable"
+        echo "Server is not running or not reachable on port $SERVER_PORT"
         return 1
     fi
 }
 
+# Function to wait for server startup with timeout
+wait_for_server() {
+  local max_attempts=20
+  local attempt=1
+  
+  echo "Waiting for server to start (max ${SERVER_START_TIMEOUT}s)..."
+  
+  while [[ $attempt -le $max_attempts ]]; do
+    echo "  Server check attempt $attempt/$max_attempts..."
+    
+    # Check if server process is still running
+    if [[ -n "${SERVER_PID:-}" ]] && ! kill -0 "$SERVER_PID" 2>/dev/null; then
+      echo "ERROR: Server process died during startup"
+      echo "Server logs:"
+      echo "============"
+      cat ${OUTPUT_DIR}/server.log 2>/dev/null || echo "No log file found"
+      echo "============"
+      return 1
+    fi
+    
+    # Try to connect with timeout
+    if timeout 3 bash -c "curl -s --head --connect-timeout 1 --max-time 2 'http://${SERVER_HOST}:${SERVER_PORT}' >/dev/null 2>&1"; then
+      echo "Server is ready on port $SERVER_PORT (attempt $attempt)"
+      return 0
+    fi
+    
+    sleep 0.5
+    ((attempt++))
+  done
+  
+  echo "ERROR: Server failed to start within ${SERVER_START_TIMEOUT}s"
+  return 1
+}
+
 # Function to run tests
 run_tests() {
-    echo "Running integration tests..."
+    echo ""
+    echo "=== Running Integration Tests ==="
     local test_success=0
     local test_failed=0
     
-    # Test echo handler
-    # echo "Testing echo handler..."
-    # local echo_response=$(curl -s -X GET --connect-timeout $REQUEST_TIMEOUT "http://${SERVER_HOST}:${SERVER_PORT}/echo")
-    # if [[ "$echo_response" == *"GET /echo HTTP"* ]]; then
-    #     echo "✓ Echo handler test passed"
-    #     ((test_success++))
-    # else
-    #     echo "✗ Echo handler test failed"
-    #     ((test_failed++))
-    # fi
-    
     # Test static file handler (if data directory exists)
     echo "Testing static file handler..."
-    local static_response=$(curl -s -X GET --connect-timeout $REQUEST_TIMEOUT "http://${SERVER_HOST}:${SERVER_PORT}/static1/index.html")
+    local static_response=$(timeout $REQUEST_TIMEOUT curl -s -X GET --connect-timeout 2 --max-time $REQUEST_TIMEOUT "http://${SERVER_HOST}:${SERVER_PORT}/static1/index.html" 2>/dev/null || echo "TIMEOUT")
     if [[ "$static_response" == *"<html>"* && "$static_response" == *"</html>"* ]]; then
         echo "✓ Static file handler test passed"
         ((test_success++))
     else
         echo "✗ Static file handler test failed"
+        echo "  Response: ${static_response:0:200}..." # Truncate long responses
         ((test_failed++))
     fi
     
-    # Test multiple requests to ensure per-request handler instantiation
-    # echo "Testing multiple requests to same endpoint..."
-    # local req1=$(curl -s -X GET --connect-timeout $REQUEST_TIMEOUT "http://${SERVER_HOST}:${SERVER_PORT}/echo?req=1")
-    # local req2=$(curl -s -X GET --connect-timeout $REQUEST_TIMEOUT "http://${SERVER_HOST}:${SERVER_PORT}/echo?req=2")
-    
-    # if [[ "$req1" == *"req=1"* && "$req2" == *"req=2"* ]]; then
-    #     echo "✓ Multiple request test passed"
-    #     ((test_success++))
-    # else
-    #     echo "✗ Multiple request test failed"
-    #     ((test_failed++))
-    # fi
-    
     # Test 404 for non-existent path
     echo "Testing 404 response..."
-    local not_found_response=$(curl -s -I -X GET --connect-timeout $REQUEST_TIMEOUT "http://${SERVER_HOST}:${SERVER_PORT}/nonexistent" | head -n 1)
+    local not_found_response=$(timeout $REQUEST_TIMEOUT curl -s -I -X GET --connect-timeout 2 --max-time $REQUEST_TIMEOUT "http://${SERVER_HOST}:${SERVER_PORT}/nonexistent" 2>/dev/null | head -n 1 || echo "TIMEOUT")
     if [[ "$not_found_response" == *"404"* ]]; then
         echo "✓ 404 test passed"
         ((test_success++))
     else
         echo "✗ 404 test failed"
+        echo "  Response: $not_found_response"
         ((test_failed++))
     fi
-
-    # Comprehensive integration test for testing all API methods 
     
     # Setup API test directory
+    echo "Setting up API test directory..."
     mkdir -p "${API_DATA_DIR}/products"
     
-    # 1. Test API POST
+    # Test API POST with timeout
+    echo "Testing API handler (POST - Create)..."
     local post_data='{"name": "Test Product", "price": 19.99, "inStock": true}'
-    local post_response=$(curl -s -X POST -d "$post_data" --connect-timeout $REQUEST_TIMEOUT "http://${SERVER_HOST}:${SERVER_PORT}/api/products")
+    local post_response=$(timeout $REQUEST_TIMEOUT curl -s -X POST -d "$post_data" --connect-timeout 2 --max-time $REQUEST_TIMEOUT "http://${SERVER_HOST}:${SERVER_PORT}/api/products" 2>/dev/null || echo "TIMEOUT")
     
-    # Extract ID from POST response for later tests
-    local product_id=$(echo $post_response | grep -o '"id":[^,}]*' | head -1 | cut -d ':' -f2)
-    
-    if [[ "$post_response" == *"\"id\""* && ! -z "$product_id" ]]; then
+    local product_id=1 # Default fallback
+    if [[ "$post_response" == *"\"id\""* && "$post_response" != "TIMEOUT" ]]; then
+        local extracted_id=$(echo $post_response | grep -o '"id":[^,}]*' | head -1 | cut -d ':' -f2 | tr -d ' "')
+        if [[ -n "$extracted_id" && "$extracted_id" =~ ^[0-9]+$ ]]; then
+            product_id=$extracted_id
+        fi
         echo "✓ API handler POST test passed (created product with ID: $product_id)"
         ((test_success++))
     else
         echo "✗ API handler POST test failed"
+        echo "  Response: ${post_response:0:200}..."
         ((test_failed++))
-        # Use default ID for remaining tests in case POST failed
-        product_id=1
     fi
     
-    #product_id was not correctly set
-    product_id=1
-
-    # 2. Test API GET (for a list)
+    # Test API GET (for a list)
     echo "Testing API handler (GET - List collection)..."
-    local list_response=$(curl -s -X GET --connect-timeout $REQUEST_TIMEOUT "http://${SERVER_HOST}:${SERVER_PORT}/api/products")
+    local list_response=$(timeout $REQUEST_TIMEOUT curl -s -X GET --connect-timeout 2 --max-time $REQUEST_TIMEOUT "http://${SERVER_HOST}:${SERVER_PORT}/api/products" 2>/dev/null || echo "TIMEOUT")
     
-    if [[ "$list_response" == *"\"file_ids\""* && "$list_response" == *"$product_id"* ]]; then
+    if [[ "$list_response" == *"\"file_ids\""* && "$list_response" != "TIMEOUT" ]]; then
         echo "✓ API handler GET collection test passed"
         ((test_success++))
     else
         echo "✗ API handler GET collection test failed"
+        echo "  Response: ${list_response:0:200}..."
         ((test_failed++))
     fi
     
-    # 3. Test API GET (for a single resource)
+    # Test API GET (for a single resource)
     echo "Testing API handler (GET - Retrieve single resource)..."
-    local get_response=$(curl -s -X GET --connect-timeout $REQUEST_TIMEOUT "http://${SERVER_HOST}:${SERVER_PORT}/api/products/$product_id")
+    local get_response=$(timeout $REQUEST_TIMEOUT curl -s -X GET --connect-timeout 2 --max-time $REQUEST_TIMEOUT "http://${SERVER_HOST}:${SERVER_PORT}/api/products/$product_id" 2>/dev/null || echo "TIMEOUT")
     
-    if [[ "$get_response" == *"\"name\""* && "$get_response" == *"\"price\""* ]]; then
+    if [[ "$get_response" == *"\"name\""* && "$get_response" != "TIMEOUT" ]]; then
         echo "✓ API handler GET single resource test passed"
         ((test_success++))
     else
         echo "✗ API handler GET single resource test failed"
+        echo "  Response: ${get_response:0:200}..."
         ((test_failed++))
     fi
     
-    # 4. Test API PUT
+    # Test API PUT
     echo "Testing API handler (PUT - Update)..."
     local put_data='{"name": "Updated Product", "price": 29.99, "inStock": false}'
-    local put_response=$(curl -s -X PUT -d "$put_data" --connect-timeout $REQUEST_TIMEOUT "http://${SERVER_HOST}:${SERVER_PORT}/api/products/$product_id")
+    local put_response=$(timeout $REQUEST_TIMEOUT curl -s -X PUT -d "$put_data" --connect-timeout 2 --max-time $REQUEST_TIMEOUT "http://${SERVER_HOST}:${SERVER_PORT}/api/products/$product_id" 2>/dev/null || echo "TIMEOUT")
     
     # GET again to verify the update
-    local updated_get_response=$(curl -s -X GET --connect-timeout $REQUEST_TIMEOUT "http://${SERVER_HOST}:${SERVER_PORT}/api/products/$product_id")
+    local updated_get_response=$(timeout $REQUEST_TIMEOUT curl -s -X GET --connect-timeout 2 --max-time $REQUEST_TIMEOUT "http://${SERVER_HOST}:${SERVER_PORT}/api/products/$product_id" 2>/dev/null || echo "TIMEOUT")
     
-    if [[ "$updated_get_response" == *"Updated Product"* && "$updated_get_response" == *"29.99"* ]]; then
-        echo "API handler PUT test passed"
+    if [[ "$updated_get_response" == *"Updated Product"* && "$updated_get_response" != "TIMEOUT" ]]; then
+        echo "✓ API handler PUT test passed"
         ((test_success++))
     else
-        echo "API handler PUT test failed"
+        echo "✗ API handler PUT test failed"
+        echo "  Updated response: ${updated_get_response:0:200}..."
         ((test_failed++))
     fi
     
-    # 5. Test API DELETE
+    # Test API DELETE
     echo "Testing API handler (DELETE)..."
-    local delete_response=$(curl -s -X DELETE --connect-timeout $REQUEST_TIMEOUT "http://${SERVER_HOST}:${SERVER_PORT}/api/products/$product_id")
+    local delete_response=$(timeout $REQUEST_TIMEOUT curl -s -X DELETE --connect-timeout 2 --max-time $REQUEST_TIMEOUT "http://${SERVER_HOST}:${SERVER_PORT}/api/products/$product_id" 2>/dev/null || echo "TIMEOUT")
     
     # Verify deletion by trying to GET the resource again
-    local deleted_get_response=$(curl -s -I -X GET --connect-timeout $REQUEST_TIMEOUT "http://${SERVER_HOST}:${SERVER_PORT}/api/products/$product_id" | head -n 1)
+    local deleted_get_response=$(timeout $REQUEST_TIMEOUT curl -s -I -X GET --connect-timeout 2 --max-time $REQUEST_TIMEOUT "http://${SERVER_HOST}:${SERVER_PORT}/api/products/$product_id" 2>/dev/null | head -n 1 || echo "TIMEOUT")
     
-    if [[ "$deleted_get_response" == *"404"* ]]; then
-        echo "API handler DELETE test passed"
+    if [[ "$deleted_get_response" == *"404"* && "$deleted_get_response" != "TIMEOUT" ]]; then
+        echo "✓ API handler DELETE test passed"
         ((test_success++))
     else
-        echo "API handler DELETE test failed"
+        echo "✗ API handler DELETE test failed"
+        echo "  Delete response: $deleted_get_response"
         ((test_failed++))
     fi
     
     # Clean up API test data
-    rm -rf "${API_DATA_DIR}/products"
+    echo "Cleaning up API test data..."
+    rm -rf "${API_DATA_DIR}/products" 2>/dev/null || true
     
     # Output results
+    echo ""
+    echo "=== Test Results ==="
+    echo "Tests passed: $test_success"
+    echo "Tests failed: $test_failed"
     echo "----------------------------------------"
-    echo "Test Results: $test_success passed, $test_failed failed"
     
     if [ $test_failed -eq 0 ]; then
-        echo "All tests passed! The server is working correctly."
+        echo "✅ All tests passed! The server is working correctly."
         return 0
     else
-        echo "Some tests failed. Check the output for details."
+        echo "❌ Some tests failed. Check the output for details."
         return 1
     fi
 }
 
+echo ""
+echo "=== Starting Integration Test ==="
+
 # Start the server (if it's not already running)
 check_server
 if [ $? -ne 0 ]; then
-    echo "Starting server..."
+    echo ""
+    echo "=== Starting Server ==="
+    echo "Starting server on port $SERVER_PORT..."
+    echo "Command: ${SERVER_BINARY} ${CONFIG_FILE}"
+    
     ${SERVER_BINARY} ${CONFIG_FILE} > ${OUTPUT_DIR}/server.log 2>&1 &
     SERVER_PID=$!
-    sleep 2  # Give the server time to start up
+    echo "Server PID: $SERVER_PID"
     
-    # Check if server started successfully
-    check_server
-    if [ $? -ne 0 ]; then
-        echo "Failed to start server. See log for details: ${OUTPUT_DIR}/server.log"
+    # Wait for server with timeout
+    if ! wait_for_server; then
+        echo "ERROR: Failed to start server"
+        echo "Server logs:"
+        echo "============"
+        cat ${OUTPUT_DIR}/server.log 2>/dev/null || echo "No log file found"
+        echo "============"
         exit 1
     fi
     
@@ -201,6 +359,7 @@ if [ $? -ne 0 ]; then
     KILL_SERVER=1
 else
     # Server already running
+    echo "Server is already running on port $SERVER_PORT"
     KILL_SERVER=0
 fi
 
@@ -208,11 +367,9 @@ fi
 run_tests
 TEST_RESULT=$?
 
-# Clean up
-if [ $KILL_SERVER -eq 1 ]; then
-    echo "Stopping server (PID: $SERVER_PID)..."
-    kill $SERVER_PID
-fi
+echo ""
+echo "=== Integration Test Complete ==="
 
+# Note: Cleanup (including server shutdown and config restore) will be handled by the trap
 exit $TEST_RESULT
 

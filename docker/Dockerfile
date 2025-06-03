@@ -34,6 +34,8 @@ COPY config/ ./config/
 RUN mkdir -p ./data
 COPY data/static1 ./data/static1
 COPY data/static2 ./data/static2
+RUN mkdir -p ./data/uploads
+RUN touch ./data/
 
 # Expose port 80 (just for reference, not mandatory)
 EXPOSE 80

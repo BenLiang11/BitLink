@@ -418,7 +418,7 @@ generate_coverage_report(
 add_test(NAME IntegrationTest COMMAND bash ../tests/test_integration.sh)
 
 # TEMPORARY TESTING
-# add_test(
-#  NAME ConcurrencyTest
-#  COMMAND bash ../tests/concurrency_test.sh
-#)
+add_test(
+ NAME ConcurrencyTest
+ COMMAND bash ../tests/concurrency_test.sh
+)
