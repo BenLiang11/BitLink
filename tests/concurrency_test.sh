@@ -5,7 +5,7 @@ set -euo pipefail
 
 PORT=8080 # Default Port so choose any empty port for testing
 SERVER_BIN="./bin/server"
-CFG_FILE="../config/server_config.conf"
+CFG_FILE="../config/complete_server_config.conf"
 SLEEP_PATH="/sleep?dur=2000"
 HEALTH_PATH="/health"
 MAX_HEALTH_MS=500 # /health must finish < 0.5 s

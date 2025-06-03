@@ -5,9 +5,9 @@
 
 # Set variables
 SERVER_BINARY="./bin/server"
-CONFIG_FILE="../config/server_config.conf"
+CONFIG_FILE="../config/complete_server_config.conf"
 SERVER_HOST="localhost"
-SERVER_PORT="80"
+SERVER_PORT="8080"
 OUTPUT_DIR="./logs"
 REQUEST_TIMEOUT=3  # Timeout for curl requests in seconds
 
