@@ -84,6 +84,18 @@ cleanup() {
   # Restore original config file
   restore_config
   
+  # Dump server logs for debugging
+  echo ""
+  echo "=== Server Logs for Debugging ==="
+  if [[ -f "${OUTPUT_DIR}/server.log" ]]; then
+    echo "Server log contents:"
+    echo "===================="
+    cat "${OUTPUT_DIR}/server.log"
+    echo "===================="
+  else
+    echo "No server log file found at ${OUTPUT_DIR}/server.log"
+  fi
+  
   echo "Cleanup completed"
   exit $exit_code
 }
@@ -225,6 +237,14 @@ run_tests() {
     else
         echo "✗ 404 test failed"
         echo "  Response: $not_found_response"
+        echo "  Immediate server logs for debugging:"
+        echo "  ====================================="
+        if [[ -f "${OUTPUT_DIR}/server.log" ]]; then
+            tail -n 20 "${OUTPUT_DIR}/server.log" | sed 's/^/  /'
+        else
+            echo "  No server log file found"
+        fi
+        echo "  ====================================="
         ((test_failed++))
     fi
     

@@ -12,8 +12,8 @@ WORKDIR /usr/src/project
 COPY . .
 
 # Build the project
-# RUN mkdir -p build && cd build && cmake .. && make && ctest --output-on_failure
 RUN mkdir -p build && cd build && cmake .. && make
+# RUN mkdir -p build && cd build && cmake .. && make && ctest -R "IntegrationTest" --verbose
 
 ### Deploy container ###
 FROM ubuntu:24.04 AS deploy
@@ -35,10 +35,9 @@ RUN mkdir -p ./data
 COPY data/static1 ./data/static1
 COPY data/static2 ./data/static2
 RUN mkdir -p ./data/uploads
-RUN touch ./data/
 
 # Expose port 80 (just for reference, not mandatory)
 EXPOSE 80
 
 # Run the server with config
-CMD ["./server", "./config/complete_server_config.conf"]
+CMD ["./server", "./config/docker.conf"]

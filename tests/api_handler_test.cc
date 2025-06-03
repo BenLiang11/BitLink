@@ -26,7 +26,7 @@ protected:
     HandlerRegistry::RegisterHandler("ApiHandler", ApiHandler::Create);
     
     // Create a temporary directory for test files
-    temp_dir_ = "/tmp/api_handler_test/";
+    temp_dir_ = "/tmp/api_handler_test";
 
     // fs::create_directories(temp_dir_);
     
@@ -34,7 +34,7 @@ protected:
     handler_ = std::make_unique<ApiHandler>("/api", temp_dir_, fs);
     
     // Create test directories directly under temp_dir_
-    std::string products_dir = (temp_dir_ + "products");
+    std::string products_dir = (temp_dir_ + "/products");
     // fs::create_directories(products_dir);
     
     // Add test files to the products directory
@@ -188,7 +188,7 @@ TEST_F(ApiHandlerTest, PostNewResource) {
   EXPECT_NE(body.find("3"), std::string::npos);  // Since we already have products 1 and 2
   
   // Verify the file was actually created
-  std::string file_path = temp_dir_ + "products" + "/3";
+  std::string file_path = temp_dir_ + "/products" + "/3";
   EXPECT_TRUE(fs.exists(file_path));
   
   // Check the content of the created file
@@ -220,7 +220,7 @@ TEST_F(ApiHandlerTest, PutExistingResource) {
   EXPECT_EQ(response->status(), Response::OK);
   
   // Verify the file was actually updated
-  std::string file_path = temp_dir_ + "products" + "/1";
+  std::string file_path = temp_dir_ + "/products" + "/1";
   std::stringstream output;
   fs.read_file(file_path, output);
   EXPECT_EQ(output.str(), "{\"id\": 1, \"name\": \"Updated Product\", \"price\": 24.99}");

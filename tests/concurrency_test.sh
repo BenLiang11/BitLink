@@ -58,6 +58,18 @@ cleanup() {
   # Restore original config file
   restore_config
   
+  # Dump server logs for debugging
+  echo ""
+  echo "=== Server Logs for Debugging ==="
+  if [[ -f "$LOG_DIR/server.log" ]]; then
+    echo "Server log contents:"
+    echo "===================="
+    cat "$LOG_DIR/server.log"
+    echo "===================="
+  else
+    echo "No server log file found at $LOG_DIR/server.log"
+  fi
+  
   echo "Cleanup completed"
   exit $exit_code
 }

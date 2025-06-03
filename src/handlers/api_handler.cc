@@ -37,7 +37,7 @@ std::unique_ptr<Response> ApiHandler::handle_request(const Request& req) {
     }
 
     std::string relative_path = request_uri.substr(5);
-    std::string base_file_path = root_directory_ + relative_path;
+    std::string base_file_path = root_directory_ + "/" + relative_path;
     std::cout << "Base File Path: " << base_file_path << std::endl;
 
     if (request_method == "POST") {

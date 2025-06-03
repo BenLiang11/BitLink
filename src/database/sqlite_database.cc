@@ -3,6 +3,7 @@
 #include <sstream>
 #include <iomanip>
 #include <ctime>
+#include <filesystem>
 
 using namespace std;
 
@@ -32,9 +33,9 @@ bool SQLiteDatabase::initialize(const string& db_path) {
     if (db_path.empty()) {
         cerr << "Database path cannot be empty" << endl;
         return false;
-    }
+    }    
     
-    // Open database connection
+    // Open database connection (SQLite will create the file automatically if it doesn't exist)
     int rc = sqlite3_open(db_path.c_str(), &db_);
     if (rc != SQLITE_OK) {
         cerr << "Failed to open database: " << sqlite3_errmsg(db_) << endl;
