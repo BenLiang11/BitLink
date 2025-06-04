@@ -94,7 +94,7 @@ unique_ptr<Response> URLShortenerHandler::handle_request(const Request& req) {
             return create_error_response("Method not allowed", Response::METHOD_NOT_ALLOWED);
         }
     }
-    else if (path.substr(0, 3) == "/r/") {
+    else if (path.substr(0, 3) == "/r/" || path.substr(0, 3) == "/f/") {
         return handle_redirect(req);
     }
     else if (path.substr(0, 7) == "/stats/") {
