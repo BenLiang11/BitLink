@@ -422,26 +422,119 @@ unique_ptr<Response> URLShortenerHandler::handle_stats(const Request& req) {
         
         // Get statistics from service
         auto stats = url_service_->get_statistics(code);
-        
-        // Build JSON response
-        JSONBuilder response_json;
-        response_json.add("success", true)
-                    .add("code", code)
-                    .add("total_clicks", stats.total_clicks);
-        
-        // Add daily statistics
-        vector<string> dates;
-        vector<int> counts;
-        for (const auto& daily : stats.daily_clicks) {
-            dates.push_back(daily.first);
-            counts.push_back(daily.second);
+
+        // Determine whether to return JSON or HTML
+        bool want_json = false;
+        // Check for ?raw=1 in query string
+        if (req.uri().find("?raw=1") != string::npos) want_json = true;
+        // Check Accept header for application/json
+        string accept = req.get_header("Accept");
+        if (accept.find("application/json") != string::npos) want_json = true;
+
+        if (want_json) {
+            // Build JSON response (old logic)
+            JSONBuilder response_json;
+            response_json.add("success", true)
+                        .add("code", code)
+                        .add("total_clicks", stats.total_clicks);
+            vector<string> dates;
+            vector<int> counts;
+            for (const auto& daily : stats.daily_clicks) {
+                dates.push_back(daily.first);
+                counts.push_back(daily.second);
+            }
+            response_json.add_array("dates", dates)
+                        .add_array("click_counts", counts);
+            return create_json_response(response_json.build());
         }
+
+        // HTML for browsers
+        std::ostringstream html;
+        html << R"HTML(
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Stats for Short URL )" << code << R"(</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; background: #f8f9fa; }
+        h1, h2 { color: #007bff; }
+        .card { background: white; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); padding: 20px; margin-top: 20px;}
+        table { width: 100%; border-collapse: collapse; margin-top: 18px;}
+        th, td { padding: 8px 12px; border-bottom: 1px solid #eee; }
+        th { background: #f1f1f1; }
+        .total { font-size: 1.2em; font-weight: bold; margin-top: 12px;}
+        .short-url { font-family: monospace; color: #111; }
+        @media (max-width: 700px) {
+            body { padding: 8px;}
+            .card { padding: 10px;}
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>Stats for Your Short Link</h1>
+    <div class="card">
+        <div><strong>Short URL:</strong> <span class="short-url"><a href="/r/)" << code << R"(" target="_blank">/r/)" << code << R"(</a></span></div>
+        <div><strong>Code:</strong> <span class="short-url">)" << code << R"(</span></div>
+        <div class="total">Total Clicks: )" << stats.total_clicks << R"(</div>
+        <h2>Clicks Over Time</h2>
+        <canvas id="statsChart" height="120"></canvas>
+        <table>
+            <tr><th>Date</th><th>Clicks</th></tr>
+)";
+        for (const auto& daily : stats.daily_clicks) {
+            html << "<tr><td>" << daily.first << "</td><td>" << daily.second << "</td></tr>\n";
+        }
+        html << R"(
+        </table>
+    </div>
+    <script>
+        const ctx = document.getElementById('statsChart').getContext('2d');
+        const chart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: [)";
+        // Labels (dates)
+        bool first = true;
+        for (const auto& daily : stats.daily_clicks) {
+            if (!first) html << ",";
+            html << "\"" << daily.first << "\"";
+            first = false;
+        }
+        html << R"(],
+                datasets: [{
+                    label: 'Clicks',
+                    data: [)";
+        first = true;
+        for (const auto& daily : stats.daily_clicks) {
+            if (!first) html << ",";
+            html << daily.second;
+            first = false;
+        }
+        html << R"(],
+                    backgroundColor: 'rgba(0,123,255,0.4)',
+                    borderColor: 'rgba(0,123,255,1)',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
+)HTML";
         
-        response_json.add_array("dates", dates)
-                    .add_array("click_counts", counts);
-        
-        return create_json_response(response_json.build());
-        
+        auto response = make_unique<Response>();
+        response->set_status_code(Response::OK);
+        response->set_header("Content-Type", "text/html");
+        response->set_body(html.str());
+        return response;
     } catch (const exception& e) {
         cerr << "Exception in handle_stats: " << e.what() << endl;
         return create_error_response("Internal server error", Response::INTERNAL_SERVER_ERROR);

@@ -333,7 +333,7 @@ TEST_F(URLShortenerHandlerTest, HandleQRCode_EmptyCode_ReturnsBadRequest) {
  */
 TEST_F(URLShortenerHandlerTest, HandleStats_ValidCode_ReturnsJSON) {
     string test_code = "abc123";
-    Request request = create_get_request("/stats/" + test_code);
+    Request request = create_get_request("/stats/" + test_code + "?raw=1");
     
     auto response = handler->handle_request(request);
     
