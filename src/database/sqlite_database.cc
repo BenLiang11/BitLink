@@ -31,28 +31,28 @@ bool SQLiteDatabase::initialize(const string& db_path) {
     
     // Validate database path
     if (db_path.empty()) {
-        cerr << "Database path cannot be empty" << endl;
+        // cerr << "Database path cannot be empty" << endl;
         return false;
     }    
     
     // Open database connection (SQLite will create the file automatically if it doesn't exist)
     int rc = sqlite3_open(db_path.c_str(), &db_);
     if (rc != SQLITE_OK) {
-        cerr << "Failed to open database: " << sqlite3_errmsg(db_) << endl;
+        // cerr << "Failed to open database: " << sqlite3_errmsg(db_) << endl;
         return false;
     }
     
     // Enable foreign key constraints
     rc = sqlite3_exec(db_, "PRAGMA foreign_keys = ON;", nullptr, nullptr, nullptr);
     if (rc != SQLITE_OK) {
-        cerr << "Failed to enable foreign keys: " << sqlite3_errmsg(db_) << endl;
+        // cerr << "Failed to enable foreign keys: " << sqlite3_errmsg(db_) << endl;
         return false;
     }
     
     // Set WAL mode for better concurrency
     rc = sqlite3_exec(db_, "PRAGMA journal_mode = WAL;", nullptr, nullptr, nullptr);
     if (rc != SQLITE_OK) {
-        cerr << "Failed to set WAL mode: " << sqlite3_errmsg(db_) << endl;
+        // cerr << "Failed to set WAL mode: " << sqlite3_errmsg(db_) << endl;
         return false;
     }
     
@@ -100,19 +100,19 @@ bool SQLiteDatabase::create_tables() {
     // Execute table creation
     int rc = sqlite3_exec(db_, create_links_table, nullptr, nullptr, nullptr);
     if (rc != SQLITE_OK) {
-        cerr << "Failed to create links table: " << sqlite3_errmsg(db_) << endl;
+        // cerr << "Failed to create links table: " << sqlite3_errmsg(db_) << endl;
         return false;
     }
     
     rc = sqlite3_exec(db_, create_clicks_table, nullptr, nullptr, nullptr);
     if (rc != SQLITE_OK) {
-        cerr << "Failed to create clicks table: " << sqlite3_errmsg(db_) << endl;
+        // cerr << "Failed to create clicks table: " << sqlite3_errmsg(db_) << endl;
         return false;
     }
     
     rc = sqlite3_exec(db_, create_indexes, nullptr, nullptr, nullptr);
     if (rc != SQLITE_OK) {
-        cerr << "Failed to create indexes: " << sqlite3_errmsg(db_) << endl;
+        // cerr << "Failed to create indexes: " << sqlite3_errmsg(db_) << endl;
         return false;
     }
     
@@ -124,7 +124,7 @@ bool SQLiteDatabase::prepare_statements() {
     const char* insert_link_sql = "INSERT INTO links (code, destination, type, created_at) VALUES (?, ?, ?, ?)";
     int rc = sqlite3_prepare_v2(db_, insert_link_sql, -1, &insert_link_stmt_, nullptr);
     if (rc != SQLITE_OK) {
-        cerr << "Failed to prepare insert_link statement: " << sqlite3_errmsg(db_) << endl;
+        // cerr << "Failed to prepare insert_link statement: " << sqlite3_errmsg(db_) << endl;
         return false;
     }
     
@@ -132,7 +132,7 @@ bool SQLiteDatabase::prepare_statements() {
     const char* get_link_sql = "SELECT code, destination, type, created_at FROM links WHERE code = ?";
     rc = sqlite3_prepare_v2(db_, get_link_sql, -1, &get_link_stmt_, nullptr);
     if (rc != SQLITE_OK) {
-        cerr << "Failed to prepare get_link statement: " << sqlite3_errmsg(db_) << endl;
+        // cerr << "Failed to prepare get_link statement: " << sqlite3_errmsg(db_) << endl;
         return false;
     }
     
@@ -140,7 +140,7 @@ bool SQLiteDatabase::prepare_statements() {
     const char* code_exists_sql = "SELECT 1 FROM links WHERE code = ? LIMIT 1";
     rc = sqlite3_prepare_v2(db_, code_exists_sql, -1, &code_exists_stmt_, nullptr);
     if (rc != SQLITE_OK) {
-        cerr << "Failed to prepare code_exists statement: " << sqlite3_errmsg(db_) << endl;
+        // cerr << "Failed to prepare code_exists statement: " << sqlite3_errmsg(db_) << endl;
         return false;
     }
     
@@ -148,7 +148,7 @@ bool SQLiteDatabase::prepare_statements() {
     const char* delete_link_sql = "DELETE FROM links WHERE code = ?";
     rc = sqlite3_prepare_v2(db_, delete_link_sql, -1, &delete_link_stmt_, nullptr);
     if (rc != SQLITE_OK) {
-        cerr << "Failed to prepare delete_link statement: " << sqlite3_errmsg(db_) << endl;
+        // cerr << "Failed to prepare delete_link statement: " << sqlite3_errmsg(db_) << endl;
         return false;
     }
     
@@ -156,7 +156,7 @@ bool SQLiteDatabase::prepare_statements() {
     const char* insert_click_sql = "INSERT INTO clicks (code, ip_truncated, user_agent, referrer, timestamp) VALUES (?, ?, ?, ?, ?)";
     rc = sqlite3_prepare_v2(db_, insert_click_sql, -1, &insert_click_stmt_, nullptr);
     if (rc != SQLITE_OK) {
-        cerr << "Failed to prepare insert_click statement: " << sqlite3_errmsg(db_) << endl;
+        // cerr << "Failed to prepare insert_click statement: " << sqlite3_errmsg(db_) << endl;
         return false;
     }
     
@@ -170,7 +170,7 @@ bool SQLiteDatabase::prepare_statements() {
     )SQL";
     rc = sqlite3_prepare_v2(db_, get_stats_sql, -1, &get_stats_stmt_, nullptr);
     if (rc != SQLITE_OK) {
-        cerr << "Failed to prepare get_stats statement: " << sqlite3_errmsg(db_) << endl;
+        // cerr << "Failed to prepare get_stats statement: " << sqlite3_errmsg(db_) << endl;
         return false;
     }
     
@@ -184,7 +184,7 @@ bool SQLiteDatabase::prepare_statements() {
     )SQL";
     rc = sqlite3_prepare_v2(db_, get_recent_clicks_sql, -1, &get_recent_clicks_stmt_, nullptr);
     if (rc != SQLITE_OK) {
-        cerr << "Failed to prepare get_recent_clicks statement: " << sqlite3_errmsg(db_) << endl;
+        // cerr << "Failed to prepare get_recent_clicks statement: " << sqlite3_errmsg(db_) << endl;
         return false;
     }
     
@@ -237,7 +237,7 @@ bool SQLiteDatabase::insert_link(const string& code, const string& destination, 
     
     // Validate input parameters
     if (code.empty()) {
-        cerr << "Link code cannot be empty" << endl;
+        // cerr << "Link code cannot be empty" << endl;
         return false;
     }
     
@@ -252,32 +252,32 @@ bool SQLiteDatabase::insert_link(const string& code, const string& destination, 
     // Bind parameters
     int rc = sqlite3_bind_text(insert_link_stmt_, 1, code.c_str(), -1, SQLITE_STATIC);
     if (rc != SQLITE_OK) {
-        cerr << "Failed to bind code: " << sqlite3_errmsg(db_) << endl;
+        // cerr << "Failed to bind code: " << sqlite3_errmsg(db_) << endl;
         return false;
     }
     
     rc = sqlite3_bind_text(insert_link_stmt_, 2, destination.c_str(), -1, SQLITE_STATIC);
     if (rc != SQLITE_OK) {
-        cerr << "Failed to bind destination: " << sqlite3_errmsg(db_) << endl;
+        // cerr << "Failed to bind destination: " << sqlite3_errmsg(db_) << endl;
         return false;
     }
     
     rc = sqlite3_bind_text(insert_link_stmt_, 3, type.c_str(), -1, SQLITE_STATIC);
     if (rc != SQLITE_OK) {
-        cerr << "Failed to bind type: " << sqlite3_errmsg(db_) << endl;
+        // cerr << "Failed to bind type: " << sqlite3_errmsg(db_) << endl;
         return false;
     }
     
     rc = sqlite3_bind_int64(insert_link_stmt_, 4, timestamp);
     if (rc != SQLITE_OK) {
-        cerr << "Failed to bind timestamp: " << sqlite3_errmsg(db_) << endl;
+        // cerr << "Failed to bind timestamp: " << sqlite3_errmsg(db_) << endl;
         return false;
     }
     
     // Execute statement
     rc = sqlite3_step(insert_link_stmt_);
     if (rc != SQLITE_DONE) {
-        cerr << "Failed to insert link: " << sqlite3_errmsg(db_) << endl;
+        // cerr << "Failed to insert link: " << sqlite3_errmsg(db_) << endl;
         return false;
     }
     
@@ -294,7 +294,7 @@ optional<LinkData> SQLiteDatabase::get_link(const string& code) {
     // Bind code parameter
     int rc = sqlite3_bind_text(get_link_stmt_, 1, code.c_str(), -1, SQLITE_STATIC);
     if (rc != SQLITE_OK) {
-        cerr << "Failed to bind code: " << sqlite3_errmsg(db_) << endl;
+        // cerr << "Failed to bind code: " << sqlite3_errmsg(db_) << endl;
         return nullopt;
     }
     
@@ -322,7 +322,7 @@ optional<LinkData> SQLiteDatabase::get_link(const string& code) {
         // No rows found
         return nullopt;
     } else {
-        cerr << "Failed to execute get_link query: " << sqlite3_errmsg(db_) << endl;
+        // cerr << "Failed to execute get_link query: " << sqlite3_errmsg(db_) << endl;
         return nullopt;
     }
 }
@@ -337,7 +337,7 @@ bool SQLiteDatabase::code_exists(const string& code) {
     // Bind code parameter
     int rc = sqlite3_bind_text(code_exists_stmt_, 1, code.c_str(), -1, SQLITE_STATIC);
     if (rc != SQLITE_OK) {
-        cerr << "Failed to bind code: " << sqlite3_errmsg(db_) << endl;
+        // cerr << "Failed to bind code: " << sqlite3_errmsg(db_) << endl;
         return false;
     }
     
@@ -348,7 +348,7 @@ bool SQLiteDatabase::code_exists(const string& code) {
     } else if (rc == SQLITE_DONE) {
         return false; // Code doesn't exist
     } else {
-        cerr << "Failed to execute code_exists query: " << sqlite3_errmsg(db_) << endl;
+        // cerr << "Failed to execute code_exists query: " << sqlite3_errmsg(db_) << endl;
         return false;
     }
 }
@@ -363,14 +363,14 @@ bool SQLiteDatabase::delete_link(const string& code) {
     // Bind code parameter
     int rc = sqlite3_bind_text(delete_link_stmt_, 1, code.c_str(), -1, SQLITE_STATIC);
     if (rc != SQLITE_OK) {
-        cerr << "Failed to bind code: " << sqlite3_errmsg(db_) << endl;
+        // cerr << "Failed to bind code: " << sqlite3_errmsg(db_) << endl;
         return false;
     }
     
     // Execute statement
     rc = sqlite3_step(delete_link_stmt_);
     if (rc != SQLITE_DONE) {
-        cerr << "Failed to delete link: " << sqlite3_errmsg(db_) << endl;
+        // cerr << "Failed to delete link: " << sqlite3_errmsg(db_) << endl;
         return false;
     }
     
@@ -392,38 +392,38 @@ bool SQLiteDatabase::record_click(const ClickRecord& record) {
     // Bind parameters
     int rc = sqlite3_bind_text(insert_click_stmt_, 1, record.code.c_str(), -1, SQLITE_STATIC);
     if (rc != SQLITE_OK) {
-        cerr << "Failed to bind code: " << sqlite3_errmsg(db_) << endl;
+        // cerr << "Failed to bind code: " << sqlite3_errmsg(db_) << endl;
         return false;
     }
     
     rc = sqlite3_bind_text(insert_click_stmt_, 2, record.ip_truncated.c_str(), -1, SQLITE_STATIC);
     if (rc != SQLITE_OK) {
-        cerr << "Failed to bind ip_truncated: " << sqlite3_errmsg(db_) << endl;
+        // cerr << "Failed to bind ip_truncated: " << sqlite3_errmsg(db_) << endl;
         return false;
     }
     
     rc = sqlite3_bind_text(insert_click_stmt_, 3, record.user_agent.c_str(), -1, SQLITE_STATIC);
     if (rc != SQLITE_OK) {
-        cerr << "Failed to bind user_agent: " << sqlite3_errmsg(db_) << endl;
+        // cerr << "Failed to bind user_agent: " << sqlite3_errmsg(db_) << endl;
         return false;
     }
     
     rc = sqlite3_bind_text(insert_click_stmt_, 4, record.referrer.c_str(), -1, SQLITE_STATIC);
     if (rc != SQLITE_OK) {
-        cerr << "Failed to bind referrer: " << sqlite3_errmsg(db_) << endl;
+        // cerr << "Failed to bind referrer: " << sqlite3_errmsg(db_) << endl;
         return false;
     }
     
     rc = sqlite3_bind_int64(insert_click_stmt_, 5, timestamp);
     if (rc != SQLITE_OK) {
-        cerr << "Failed to bind timestamp: " << sqlite3_errmsg(db_) << endl;
+        // cerr << "Failed to bind timestamp: " << sqlite3_errmsg(db_) << endl;
         return false;
     }
     
     // Execute statement
     rc = sqlite3_step(insert_click_stmt_);
     if (rc != SQLITE_DONE) {
-        cerr << "Failed to insert click record: " << sqlite3_errmsg(db_) << endl;
+        // cerr << "Failed to insert click record: " << sqlite3_errmsg(db_) << endl;
         return false;
     }
     
@@ -441,7 +441,7 @@ ClickStats SQLiteDatabase::get_click_stats(const string& code) {
     
     int rc = sqlite3_bind_text(get_stats_stmt_, 1, code.c_str(), -1, SQLITE_STATIC);
     if (rc != SQLITE_OK) {
-        cerr << "Failed to bind code for stats: " << sqlite3_errmsg(db_) << endl;
+        // cerr << "Failed to bind code for stats: " << sqlite3_errmsg(db_) << endl;
         return stats;
     }
     
@@ -454,7 +454,7 @@ ClickStats SQLiteDatabase::get_click_stats(const string& code) {
             stats.last_accessed = chrono::system_clock::from_time_t(last_accessed_timestamp);
         }
     } else if (rc != SQLITE_DONE) {
-        cerr << "Failed to get basic stats: " << sqlite3_errmsg(db_) << endl;
+        // cerr << "Failed to get basic stats: " << sqlite3_errmsg(db_) << endl;
         return stats;
     }
     
@@ -473,13 +473,13 @@ ClickStats SQLiteDatabase::get_click_stats(const string& code) {
     sqlite3_stmt* daily_stats_stmt;
     rc = sqlite3_prepare_v2(db_, daily_stats_sql, -1, &daily_stats_stmt, nullptr);
     if (rc != SQLITE_OK) {
-        cerr << "Failed to prepare daily stats query: " << sqlite3_errmsg(db_) << endl;
+        // cerr << "Failed to prepare daily stats query: " << sqlite3_errmsg(db_) << endl;
         return stats;
     }
     
     rc = sqlite3_bind_text(daily_stats_stmt, 1, code.c_str(), -1, SQLITE_STATIC);
     if (rc != SQLITE_OK) {
-        cerr << "Failed to bind code for daily stats: " << sqlite3_errmsg(db_) << endl;
+        // cerr << "Failed to bind code for daily stats: " << sqlite3_errmsg(db_) << endl;
         sqlite3_finalize(daily_stats_stmt);
         return stats;
     }
@@ -494,7 +494,7 @@ ClickStats SQLiteDatabase::get_click_stats(const string& code) {
     }
     
     if (rc != SQLITE_DONE) {
-        cerr << "Failed to get daily stats: " << sqlite3_errmsg(db_) << endl;
+        // cerr << "Failed to get daily stats: " << sqlite3_errmsg(db_) << endl;
     }
     
     sqlite3_finalize(daily_stats_stmt);
@@ -513,13 +513,13 @@ vector<ClickRecord> SQLiteDatabase::get_recent_clicks(const string& code, int li
     // Bind parameters
     int rc = sqlite3_bind_text(get_recent_clicks_stmt_, 1, code.c_str(), -1, SQLITE_STATIC);
     if (rc != SQLITE_OK) {
-        cerr << "Failed to bind code: " << sqlite3_errmsg(db_) << endl;
+        // cerr << "Failed to bind code: " << sqlite3_errmsg(db_) << endl;
         return records;
     }
     
     rc = sqlite3_bind_int(get_recent_clicks_stmt_, 2, limit);
     if (rc != SQLITE_OK) {
-        cerr << "Failed to bind limit: " << sqlite3_errmsg(db_) << endl;
+        // cerr << "Failed to bind limit: " << sqlite3_errmsg(db_) << endl;
         return records;
     }
     
@@ -543,7 +543,7 @@ vector<ClickRecord> SQLiteDatabase::get_recent_clicks(const string& code, int li
     }
     
     if (rc != SQLITE_DONE) {
-        cerr << "Failed to get recent clicks: " << sqlite3_errmsg(db_) << endl;
+        // cerr << "Failed to get recent clicks: " << sqlite3_errmsg(db_) << endl;
         records.clear();
     }
     

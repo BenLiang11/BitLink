@@ -37,6 +37,8 @@ public:
     ClickStats get_click_stats(const string& code) override;
     vector<ClickRecord> get_recent_clicks(const string& code, 
                                             int limit = 100) override;
+    string get_current_date() const;
+
 
 private:
     sqlite3* db_;
@@ -53,7 +55,6 @@ private:
     
     bool prepare_statements();
     void cleanup_statements();
-    string get_current_date() const;
 };
 
 #endif // SQLITE_DATABASE_H

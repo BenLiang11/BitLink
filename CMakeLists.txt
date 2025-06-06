@@ -105,7 +105,7 @@ set_target_properties(qrencode_static PROPERTIES
 # Server executable
 add_executable(server src/main.cc)
 target_include_directories(server PUBLIC ${CMAKE_SOURCE_DIR}/include)
-target_link_libraries(server server_lib handler_registry_lib logger_lib)
+target_link_libraries(server server_lib handler_registry_lib logger_lib thread_generator_lib)
 
 # Basic libraries (no interdependencies)
 add_library(logger_lib src/logger.cc)
@@ -155,6 +155,10 @@ target_include_directories(http_parser_lib PUBLIC ${CMAKE_SOURCE_DIR}/include)
 # JSON builder library for creating API responses
 add_library(json_builder_lib src/utils/json_builder.cc)
 target_include_directories(json_builder_lib PUBLIC ${CMAKE_SOURCE_DIR}/include)
+
+# Thread Generator library
+add_library(thread_generator_lib src/utils/thread_generator.cc)
+target_include_directories(thread_generator_lib PUBLIC ${CMAKE_SOURCE_DIR}/include)
 
 # URL Shortening Service library
 add_library(url_shortening_service_lib src/services/url_shortening_service.cc)
@@ -290,6 +294,17 @@ target_link_libraries(file_upload_service_test file_upload_service_lib handlers_
 add_executable(url_shortener_handler_test tests/url_shortener_handler_test.cc)
 target_link_libraries(url_shortener_handler_test handlers_lib request_lib response_lib handler_registry_lib GTest::gtest_main GTest::gmock_main)
 
+add_executable(thread_generator_test tests/thread_generator_test.cc)
+target_link_libraries(thread_generator_test
+    thread_generator_lib
+    GTest::gtest_main
+    GTest::gmock_main
+    Boost::log
+    Boost::log_setup
+    Boost::date_time
+    pthread
+)
+
 add_executable(echo_handler_test tests/echo_handler_test.cc)
 add_executable(static_file_handler_test tests/static_file_handler_test.cc)
 add_executable(handler_registry_test tests/handler_registry_test.cc)
@@ -351,6 +366,7 @@ gtest_discover_tests(handler_server_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURC
 gtest_discover_tests(handler_dispatcher_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
 gtest_discover_tests(api_handler_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
 gtest_discover_tests(health_handler_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+gtest_discover_tests(thread_generator_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
 
 # Integration test script
 add_custom_target(integration_test
@@ -385,6 +401,7 @@ generate_coverage_report(
     json_builder_lib
     url_shortening_service_lib
     file_upload_service_lib
+    thread_generator_lib
   TESTS
     config_parser_test
     server_test
@@ -413,6 +430,7 @@ generate_coverage_report(
     logger_test
     logger_rotation_test
     health_handler_test
+    thread_generator_test
 )
 
 add_test(NAME IntegrationTest COMMAND bash ../tests/test_integration.sh)

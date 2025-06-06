@@ -533,3 +533,10 @@ TEST_F(SQLiteDatabaseTest, BulkClickRecordingPerformance) {
     auto stats = db_->get_click_stats(test_code_);
     EXPECT_EQ(stats.total_clicks, 500);
 } 
+TEST_F(SQLiteDatabaseTest, GetCurrentDateFormat) {
+    ASSERT_TRUE(db_->initialize(temp_db_path_));
+    std::string date = db_->get_current_date();
+    EXPECT_EQ(date.length(), 10);
+    EXPECT_EQ(date[4], '-');
+    EXPECT_EQ(date[7], '-');
+}

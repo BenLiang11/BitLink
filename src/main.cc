@@ -16,6 +16,7 @@
 #include "server_config.h"
 #include "handler_server.h"
 #include "handler_dispatcher.h"
+#include "utils/thread_generator.h"
 #include "handlers/echo_handler.h"
 #include "handlers/static_file_handler.h"
 #include "handlers/not_found_handler.h"
@@ -115,18 +116,7 @@ int main(int argc, char* argv[]) {
         }
         
         // Create worker threads
-        worker_threads.reserve(thread_count - 1);
-        for (unsigned int i = 0; i < thread_count - 1; ++i) {
-            worker_threads.emplace_back([&]() {
-                try {
-                    BOOST_LOG_TRIVIAL(info) << "Worker thread " << std::this_thread::get_id() << " started";
-                    global_io_context->run();
-                    BOOST_LOG_TRIVIAL(info) << "Worker thread " << std::this_thread::get_id() << " stopped";
-                } catch (const std::exception& e) {
-                    BOOST_LOG_TRIVIAL(error) << "Worker thread exception: " << e.what();
-                }
-            });
-        }
+        StartWorkerThreads(*global_io_context, thread_count, worker_threads);
         
         // Run on main thread as well
         BOOST_LOG_TRIVIAL(info) << "Main thread starting event loop";
