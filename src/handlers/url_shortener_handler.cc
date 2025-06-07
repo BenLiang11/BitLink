@@ -450,105 +450,194 @@ unique_ptr<Response> URLShortenerHandler::handle_stats(const Request& req) {
 
         // HTML for browsers
         std::ostringstream html;
-        html << R"HTML(
-        <!DOCTYPE html>
+        html << R"HTML(<!DOCTYPE html>
         <html lang="en">
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        )HTML";
-                html << "    <title>Statistics for " << code << "</title>\n";
-                html << R"HTML(
+            <title>Stats for Short URL - )HTML" << code << R"HTML(</title>
+            <!-- Include Tailwind CSS -->
+            <script src="https://cdn.tailwindcss.com"></script>
+            <!-- Custom Font -->
+            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+            <!-- Chart.js Library -->
             <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
             <style>
-                body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f0f2f5; color: #1c1e21; margin: 0; padding: 20px; }
-                .container { max-width: 900px; margin: 40px auto; padding: 20px; background-color: #fff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-                .header-controls { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
-                h1 { color: #0056b3; border-bottom: 2px solid #f0f2f5; padding-bottom: 10px; margin-right: 20px; }
-                .code-highlight { color: #007bff; font-weight: bold; font-family: monospace; }
-                .stats-card { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center; }
-                .stats-card .value { font-size: 48px; font-weight: bold; color: #0056b3; }
-                .stats-card .label { font-size: 18px; color: #6c757d; }
-                .chart-container { margin-top: 30px; }
-                table { width: 100%; border-collapse: collapse; margin-top: 30px; }
-                th, td { text-align: left; padding: 12px; border-bottom: 1px solid #dee2e6; }
-                th { background-color: #f8f9fa; }
-                .json-button { background-color: #007bff; color: white; padding: 8px 15px; border-radius: 5px; text-decoration: none; font-size: 14px; white-space: nowrap; }
-                .json-button:hover { background-color: #0056b3; }
+                /* Apply Inter font to the entire body */
+                body {
+                    font-family: 'Inter', sans-serif;
+                }
+                /* Custom height for the chart to make it more visible */
+                #statsChart {
+                    max-height: 250px; /* Adjust as needed */
+                    width: 100%;
+                }
             </style>
         </head>
-        <body>
-            <div class="container">
-                <div class="header-controls">
-        )HTML";
-                html << "            <h1>Statistics for <span class=\"code-highlight\">" << code << "</span></h1>\n";
-                html << "            <a href=\"/stats/" << code << "?raw=1\" class=\"json-button\">View Raw JSON</a>\n";
-                html << R"HTML(
+        <body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+            <div class="max-w-3xl w-full bg-white rounded-xl shadow-lg p-6 md:p-8">
+                <h1 class="text-3xl md:text-4xl font-bold text-blue-600 mb-6 text-center">Stats for Your Short Link</h1>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    <!-- Short URL and Code Card -->
+                    <div class="bg-blue-50 p-6 rounded-lg border border-blue-200">
+                        <p class="text-lg font-medium text-gray-700 mb-2">
+                            <strong>Short URL:</strong>
+                            <span class="font-mono text-blue-700 break-all">
+                                <a href="/r/)HTML" << code << R"HTML(" target="_blank" class="hover:underline">
+                                    /r/)HTML" << code << R"HTML(
+                                </a>
+                            </span>
+                        </p>
+                        <p class="text-lg font-medium text-gray-700">
+                            <strong>Code:</strong>
+                            <span class="font-mono text-blue-700 break-all">
+                                )HTML" << code << R"HTML(
+                            </span>
+                        </p>
+                    </div>
+
+                    <!-- Total Clicks Card -->
+                    <div class="bg-green-50 p-6 rounded-lg border border-green-200 flex items-center justify-center">
+                        <p class="text-2xl font-bold text-green-700">
+                            Total Clicks:
+                            <span class="text-green-900">
+                                )HTML" << stats.total_clicks << R"HTML(
+                            </span>
+                        </p>
+                    </div>
                 </div>
-                <div class="stats-card">
-        )HTML";
-                html << "            <div class=\"value\">" << stats_result.total_clicks << "</div>\n";
-                html << R"HTML(
-                    <div class="label">Total Clicks</div>
+
+                <!-- Clicks Over Time Section -->
+                <div class="bg-white rounded-xl shadow-md p-6 mb-8">
+                    <h2 class="text-2xl md::text-3xl font-semibold text-blue-600 mb-4">Clicks Over Time</h2>
+                    <canvas id="statsChart" height="120"></canvas>
                 </div>
-                <div class="chart-container">
-                    <h2>Daily Clicks</h2>
-                    <canvas id="clicksChart"></canvas>
+
+                <!-- Daily Clicks Table -->
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <h2 class="text-2xl md:text-3xl font-semibold text-blue-600 mb-4">Daily Clicks Data</h2>
+                    <div class="overflow-x-auto rounded-lg border border-gray-200">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tl-lg">Date</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-lg">Clicks</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">)HTML";
+
+            // Loop for Daily Clicks Table
+            for (const auto& daily : stats.daily_clicks) {
+                html << "<tr><td class=\"px-6 py-4 whitespace-nowrap text-sm text-gray-900\">" << daily.first << "</td><td class=\"px-6 py-4 whitespace-nowrap text-sm text-gray-900\">" << daily.second << "</td></tr>\n";
+            }
+
+            html << R"HTML(</tbody>
+                        </table>
+                    </div>
                 </div>
-                <h2>Click Data</h2>
-                <table>
-                    <tr><th>Date</th><th>Clicks</th></tr>
-        )HTML";
-                // Dynamically add table rows
-                for (const auto& daily : stats_result.daily_clicks) {
-                    html << "            <tr><td>" << daily.first << "</td><td>" << daily.second << "</td></tr>\n";
-                }
-                html << R"HTML(
-                </table>
-            </div>
-            <script>
-                const ctx = document.getElementById('clicksChart').getContext('2d');
-                new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: [)HTML";
-                // Dynamically add chart labels (dates)
-                for (const auto& daily : stats_result.daily_clicks) {
-                    html << "\"" << daily.first << "\",";
-                }
-                html << R"HTML(],
-                        datasets: [{
-                            label: 'Clicks per Day',
-                            data: [)HTML";
-                // Dynamically add chart data (click counts)
-                for (const auto& daily : stats_result.daily_clicks) {
-                    html << daily.second << ",";
-                }
-                html << R"HTML(],
-                            backgroundColor: 'rgba(0, 123, 255, 0.5)',
-                            borderColor: 'rgba(0, 123, 255, 1)',
-                            borderWidth: 1
-                        }]
-                    },
-                    options: {
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                ticks: { 
-                                    stepSize: 1,
-                                    precision: 0
+
+                <script>
+                    // These arrays are populated directly by the C++ backend
+                    const dates = [)HTML";
+
+            // Loop for Chart.js Dates (Labels)
+            bool first_date = true;
+            for (const auto& daily : stats.daily_clicks) {
+                if (!first_date) html << ",";
+                html << "\"" << daily.first << "\""; // Dates as JavaScript strings
+                first_date = false;
+            }
+            html << R"HTML(];
+                    const clicks = [)HTML";
+
+            // Loop for Chart.js Clicks (Data)
+            bool first_click = true;
+            for (const auto& daily : stats.daily_clicks) {
+                if (!first_click) html << ",";
+                html << daily.second; // Clicks as JavaScript numbers
+                first_click = false;
+            }
+
+            html << R"HTML(];
+
+                    const ctx = document.getElementById('statsChart').getContext('2d');
+                    const chart = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: dates,
+                            datasets: [{
+                                label: 'Clicks',
+                                data: clicks,
+                                backgroundColor: 'rgba(59, 130, 246, 0.6)', // Tailwind blue-500 with opacity
+                                borderColor: 'rgba(37, 99, 235, 1)',      // Tailwind blue-600
+                                borderWidth: 1,
+                                borderRadius: 4, // Rounded corners for bars
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false, // Allows the chart to take full height of its container
+                            plugins: {
+                                legend: {
+                                    display: true,
+                                    position: 'top',
+                                    labels: {
+                                        font: {
+                                            size: 14,
+                                            family: 'Inter',
+                                        }
+                                    }
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            let label = context.dataset.label || '';
+                                            if (label) {
+                                                label += ': ';
+                                            }
+                                            label += context.parsed.y;
+                                            return label + ' clicks';
+                                        }
+                                    },
+                                    bodyFont: {
+                                        family: 'Inter',
+                                    },
+                                    titleFont: {
+                                        family: 'Inter',
+                                        weight: 'bold',
+                                    }
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    grid: {
+                                        color: 'rgba(0, 0, 0, 0.05)',
+                                    },
+                                    ticks: {
+                                        font: {
+                                            family: 'Inter',
+                                        }
+                                    }
+                                },
+                                x: {
+                                    grid: {
+                                        display: false,
+                                    },
+                                    ticks: {
+                                        font: {
+                                            family: 'Inter',
+                                        }
+                                    }
                                 }
                             }
-                        },
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: { legend: { display: false } }
-                    }
-                });
-            </script>
+                        }
+                    });
+                </script>
+            </div>
         </body>
-        </html>
-        )HTML";
+        </html>)HTML";
         
         auto response = make_unique<Response>();
         response->set_status_code(Response::OK);
