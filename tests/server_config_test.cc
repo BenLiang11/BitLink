@@ -220,6 +220,13 @@ TEST_F(ServerConfigTest, CreateHandlerRegistrations) {
   echo_statement->tokens_.push_back("EchoHandler");
   nginx_config_.statements_.push_back(echo_statement);
 
+  // Health Handler
+  auto health_statement = std::make_shared<NginxConfigStatement>();
+  health_statement->tokens_.push_back("location");
+  health_statement->tokens_.push_back("/health");
+  health_statement->tokens_.push_back("HealthHandler");
+  nginx_config_.statements_.push_back(health_statement);
+
   // Static handler
   auto static_statement = std::make_shared<NginxConfigStatement>();
   static_statement->tokens_.push_back("location");
@@ -235,15 +242,50 @@ TEST_F(ServerConfigTest, CreateHandlerRegistrations) {
   
   nginx_config_.statements_.push_back(static_statement);
 
+  // URL Shortener Handler
+  auto url_shortener_statement = std::make_shared<NginxConfigStatement>();
+  url_shortener_statement->tokens_.push_back("location");
+  url_shortener_statement->tokens_.push_back("/shorten");
+  url_shortener_statement->tokens_.push_back("URLShortenerHandler");
+  // Add required arguments as a child block
+  auto url_shortener_child_block = std::make_unique<NginxConfig>();
+  auto serving_path_stmt = std::make_shared<NginxConfigStatement>();
+  serving_path_stmt->tokens_.push_back("serving_path");
+  serving_path_stmt->tokens_.push_back("/shorten");
+  url_shortener_child_block->statements_.push_back(serving_path_stmt);
+
+  auto upload_dir_stmt = std::make_shared<NginxConfigStatement>();
+  upload_dir_stmt->tokens_.push_back("upload_dir");
+  upload_dir_stmt->tokens_.push_back("/tmp/uploads");
+  url_shortener_child_block->statements_.push_back(upload_dir_stmt);
+
+  auto db_path_stmt = std::make_shared<NginxConfigStatement>();
+  db_path_stmt->tokens_.push_back("db_path");
+  db_path_stmt->tokens_.push_back("/tmp/urlshortener.db");
+  url_shortener_child_block->statements_.push_back(db_path_stmt);
+
+  auto base_url_stmt = std::make_shared<NginxConfigStatement>();
+  base_url_stmt->tokens_.push_back("base_url");
+  base_url_stmt->tokens_.push_back("http://localhost:8080");
+  url_shortener_child_block->statements_.push_back(base_url_stmt);
+
+  url_shortener_statement->child_block_ = std::move(url_shortener_child_block);
+  nginx_config_.statements_.push_back(url_shortener_statement);
+
   EXPECT_TRUE(config_.ParseConfig(nginx_config_));
 
   auto registrations = config_.CreateHandlerRegistrations();
-  EXPECT_EQ(registrations.size(), 3);
+  EXPECT_EQ(registrations.size(), 5);
   
   // Check echo handler registration
   ASSERT_TRUE(registrations.find("/echo") != registrations.end());
   EXPECT_EQ(registrations["/echo"].handler_name, "EchoHandler");
   EXPECT_TRUE(registrations["/echo"].args.empty());
+  
+   // Check health handler registration
+  ASSERT_TRUE(registrations.find("/health") != registrations.end());
+  EXPECT_EQ(registrations["/health"].handler_name, "HealthHandler");
+  EXPECT_TRUE(registrations["/health"].args.empty());
   
   // Check static handler registration
   ASSERT_TRUE(registrations.find("/static") != registrations.end());
@@ -251,6 +293,17 @@ TEST_F(ServerConfigTest, CreateHandlerRegistrations) {
   EXPECT_EQ(registrations["/static"].args.size(), 2);
   EXPECT_EQ(registrations["/static"].args[0], "/static");
   EXPECT_EQ(registrations["/static"].args[1], "/path/to/files");
+
+  // Check URL shortener handler registration
+  ASSERT_TRUE(registrations.find("/shorten") != registrations.end());
+  EXPECT_EQ(registrations["/shorten"].handler_name, "URLShortenerHandler");
+  // Should have 4 arguments: serving_path, upload_dir, db_path, base_url
+  EXPECT_EQ(registrations["/shorten"].args.size(), 4);
+  EXPECT_EQ(registrations["/shorten"].args[0], "/shorten");
+  EXPECT_EQ(registrations["/shorten"].args[1], "/tmp/uploads");
+  EXPECT_EQ(registrations["/shorten"].args[2], "/tmp/urlshortener.db");
+  EXPECT_EQ(registrations["/shorten"].args[3], "http://localhost:8080");
+  
 }
 
 TEST_F(ServerConfigTest, ParseQuotedArgumentThrows) {
@@ -276,4 +329,22 @@ TEST_F(ServerConfigTest, ParseQuotedArgumentThrows) {
   EXPECT_THROW({
     config_.ParseConfig(nginx_config_);
   }, std::invalid_argument);
+}
+TEST_F(ServerConfigTest, ParseApiHandler) {
+  auto port_stmt = std::make_shared<NginxConfigStatement>();
+  port_stmt->tokens_ = {"listen", "8080"};
+  nginx_config_.statements_.push_back(port_stmt);
+
+  auto api_stmt = std::make_shared<NginxConfigStatement>();
+  api_stmt->tokens_ = {"location", "/api", "ApiHandler"};
+  auto api_block = std::make_unique<NginxConfig>();
+  auto data_path_stmt = std::make_shared<NginxConfigStatement>();
+  data_path_stmt->tokens_ = {"data_path", "/tmp/data"};
+  api_block->statements_.push_back(data_path_stmt);
+  api_stmt->child_block_ = std::move(api_block);
+  nginx_config_.statements_.push_back(api_stmt);
+
+  ASSERT_TRUE(config_.ParseConfig(nginx_config_));
+  auto registrations = config_.CreateHandlerRegistrations();
+  EXPECT_EQ(registrations["/api"].handler_name, "ApiHandler");
 }
