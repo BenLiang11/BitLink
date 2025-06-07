@@ -455,82 +455,94 @@ unique_ptr<Response> URLShortenerHandler::handle_stats(const Request& req) {
         <html lang="en">
         <head>
             <meta charset="UTF-8">
-            <title>Stats for Short URL
-        )HTML" << code << R"HTML(
-        </title>
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <style>
-                body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; background: #f8f9fa; }
-                h1, h2 { color: #007bff; }
-                .card { background: white; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); padding: 20px; margin-top: 20px;}
-                table { width: 100%; border-collapse: collapse; margin-top: 18px;}
-                th, td { padding: 8px 12px; border-bottom: 1px solid #eee; }
-                th { background: #f1f1f1; }
-                .total { font-size: 1.2em; font-weight: bold; margin-top: 12px;}
-                .short-url { font-family: monospace; color: #111; }
-                @media (max-width: 700px) {
-                    body { padding: 8px;}
-                    .card { padding: 10px;}
-                }
-            </style>
+        )HTML";
+                html << "    <title>Statistics for " << code << "</title>\n";
+                html << R"HTML(
             <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+            <style>
+                body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f0f2f5; color: #1c1e21; margin: 0; padding: 20px; }
+                .container { max-width: 900px; margin: 40px auto; padding: 20px; background-color: #fff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+                .header-controls { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+                h1 { color: #0056b3; border-bottom: 2px solid #f0f2f5; padding-bottom: 10px; margin-right: 20px; }
+                .code-highlight { color: #007bff; font-weight: bold; font-family: monospace; }
+                .stats-card { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center; }
+                .stats-card .value { font-size: 48px; font-weight: bold; color: #0056b3; }
+                .stats-card .label { font-size: 18px; color: #6c757d; }
+                .chart-container { margin-top: 30px; }
+                table { width: 100%; border-collapse: collapse; margin-top: 30px; }
+                th, td { text-align: left; padding: 12px; border-bottom: 1px solid #dee2e6; }
+                th { background-color: #f8f9fa; }
+                .json-button { background-color: #007bff; color: white; padding: 8px 15px; border-radius: 5px; text-decoration: none; font-size: 14px; white-space: nowrap; }
+                .json-button:hover { background-color: #0056b3; }
+            </style>
         </head>
         <body>
-            <h1>Stats for Your Short Link</h1>
-            <div class="card">
-                <div><strong>Short URL:</strong> <span class="short-url"><a href="/r/)"HTML
-            << code << R"HTML(" target="_blank">/r/)"HTML << code << R"HTML(</a></span></div>
-                <div><strong>Code:</strong> <span class="short-url">)"HTML << code << R"HTML(</span></div>
-                <div class="total">Total Clicks: )HTML" << stats.total_clicks << R"HTML(</div>
-                <h2>Clicks Over Time</h2>
-                <canvas id="statsChart" height="120"></canvas>
+            <div class="container">
+                <div class="header-controls">
+        )HTML";
+                html << "            <h1>Statistics for <span class=\"code-highlight\">" << code << "</span></h1>\n";
+                html << "            <a href=\"/stats/" << code << "?raw=1\" class=\"json-button\">View Raw JSON</a>\n";
+                html << R"HTML(
+                </div>
+                <div class="stats-card">
+        )HTML";
+                html << "            <div class=\"value\">" << stats_result.total_clicks << "</div>\n";
+                html << R"HTML(
+                    <div class="label">Total Clicks</div>
+                </div>
+                <div class="chart-container">
+                    <h2>Daily Clicks</h2>
+                    <canvas id="clicksChart"></canvas>
+                </div>
+                <h2>Click Data</h2>
                 <table>
                     <tr><th>Date</th><th>Clicks</th></tr>
         )HTML";
-
-        for (const auto& daily : stats.daily_clicks) {
-            html << "<tr><td>" << daily.first << "</td><td>" << daily.second << "</td></tr>\n";
-        }
-
-        html << R"HTML(
+                // Dynamically add table rows
+                for (const auto& daily : stats_result.daily_clicks) {
+                    html << "            <tr><td>" << daily.first << "</td><td>" << daily.second << "</td></tr>\n";
+                }
+                html << R"HTML(
                 </table>
             </div>
             <script>
-                const ctx = document.getElementById('statsChart').getContext('2d');
-                const chart = new Chart(ctx, {
+                const ctx = document.getElementById('clicksChart').getContext('2d');
+                new Chart(ctx, {
                     type: 'bar',
                     data: {
-                        labels: [
-        )HTML";
-
-        bool first = true;
-        for (const auto& daily : stats.daily_clicks) {
-            if (!first) html << ",";
-            html << "\"" << daily.first << "\"";
-            first = false;
-        }
-        html << R"HTML(],
+                        labels: [)HTML";
+                // Dynamically add chart labels (dates)
+                for (const auto& daily : stats_result.daily_clicks) {
+                    html << "\"" << daily.first << "\",";
+                }
+                html << R"HTML(],
                         datasets: [{
-                            label: 'Clicks',
-                            data: [
-        )HTML";
-
-        first = true;
-        for (const auto& daily : stats.daily_clicks) {
-            if (!first) html << ",";
-            html << daily.second;
-            first = false;
-        }
-        html << R"HTML(],
-                            backgroundColor: 'rgba(0,123,255,0.4)',
-                            borderColor: 'rgba(0,123,255,1)',
-                            borderWidth: 2
+                            label: 'Clicks per Day',
+                            data: [)HTML";
+                // Dynamically add chart data (click counts)
+                for (const auto& daily : stats_result.daily_clicks) {
+                    html << daily.second << ",";
+                }
+                html << R"HTML(],
+                            backgroundColor: 'rgba(0, 123, 255, 0.5)',
+                            borderColor: 'rgba(0, 123, 255, 1)',
+                            borderWidth: 1
                         }]
                     },
                     options: {
                         scales: {
-                            y: { beginAtZero: true }
-                        }
+                            y: {
+                                beginAtZero: true,
+                                ticks: { 
+                                    stepSize: 1,
+                                    precision: 0
+                                }
+                            }
+                        },
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } }
                     }
                 });
             </script>
