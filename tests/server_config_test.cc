@@ -214,6 +214,14 @@ TEST_F(ServerConfigTest, CreateHandlerRegistrations) {
   port_statement->tokens_.push_back("8080");
   nginx_config_.statements_.push_back(port_statement);
 
+  // unknown
+  auto  unknown_statement = std::make_shared<NginxConfigStatement>();
+  unknown_statement->tokens_.push_back("location");
+  unknown_statement->tokens_.push_back("/Unknown");
+  unknown_statement->tokens_.push_back("UnknownHandler");
+  nginx_config_.statements_.push_back(unknown_statement);
+  
+  //echo
   auto echo_statement = std::make_shared<NginxConfigStatement>();
   echo_statement->tokens_.push_back("location");
   echo_statement->tokens_.push_back("/echo");
