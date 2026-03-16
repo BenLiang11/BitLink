@@ -2,6 +2,8 @@
 
 BitLink is a modular and extensible web server written in modern C++17. It supports dynamic request routing, file serving, configurable logging, and handler-based request processing.
 
+**Note:** This project was originally developed under the name **I-AM-STEVE** on a private Gerrit instance.
+
 ## Prerequisites
 
 - CMake ≥ 3.10
